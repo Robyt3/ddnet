@@ -1,2 +1,4 @@
 null:json.c
 pointer-overflow:json.c
+shift-base:libradamsa.c
+shift-exponent:libradamsa.c

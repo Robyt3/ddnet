@@ -18,6 +18,11 @@
 #include "network.h"
 #include "snapshot.h"
 
+extern "C"
+{
+#include <radamsa.h>
+}
+
 const double g_aSpeeds[g_DemoSpeeds] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0, 40.0, 48.0, 56.0, 64.0};
 const CUuid SHA256_EXTENSION =
 	{{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c,
@@ -608,6 +613,12 @@ void CDemoPlayer::DoTick()
 			}
 
 			DataSize = CVariableInt::Decompress(s_aDecompressed, DataSize, s_aData, sizeof(s_aData));
+
+			static const unsigned int sc_InitialSeed = ((unsigned)rand()) << 16u | rand();
+			static unsigned int s_FuzzSeed = sc_InitialSeed;
+			if(s_FuzzSeed == sc_InitialSeed)
+				radamsa_init();
+			DataSize = radamsa_inplace((uint8_t *)s_aData, DataSize, sizeof(s_aData), s_FuzzSeed++);
 
 			if(DataSize < 0)
 			{
