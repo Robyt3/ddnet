@@ -583,7 +583,7 @@ void CDemoPlayer::DoTick()
 
 		// read the chunk
 		int DataSize = 0;
-		static char s_aData[CSnapshot::MAX_SIZE];
+		alignas(CSnapshot) static char s_aData[CSnapshot::MAX_SIZE];
 		if(ChunkSize)
 		{
 			static char s_aCompresseddata[CSnapshot::MAX_SIZE];
@@ -621,7 +621,7 @@ void CDemoPlayer::DoTick()
 		if(ChunkType == CHUNKTYPE_DELTA)
 		{
 			// process delta snapshot
-			static char s_aNewsnap[CSnapshot::MAX_SIZE];
+			alignas(CSnapshot) static char s_aNewsnap[CSnapshot::MAX_SIZE];
 			CSnapshot *pNewsnap = (CSnapshot *)s_aNewsnap;
 			DataSize = m_pSnapshotDelta->UnpackDelta((CSnapshot *)m_aLastSnapshotData, pNewsnap, s_aData, DataSize);
 

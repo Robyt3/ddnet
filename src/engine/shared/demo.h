@@ -21,7 +21,7 @@ class CDemoRecorder : public IDemoRecorder
 	int m_LastTickMarker;
 	int m_LastKeyFrame;
 	int m_FirstTick;
-	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
+	alignas(CSnapshot) unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
 	class CSnapshotDelta *m_pSnapshotDelta;
 	int m_NumTimelineMarkers;
 	int m_aTimelineMarkers[MAX_TIMELINE_MARKERS];
@@ -113,7 +113,7 @@ private:
 
 	CPlaybackInfo m_Info;
 	int m_DemoType;
-	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
+	alignas(CSnapshot) unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
 	int m_LastSnapshotDataSize;
 	class CSnapshotDelta *m_pSnapshotDelta;
 

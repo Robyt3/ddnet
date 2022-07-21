@@ -888,7 +888,7 @@ void CServer::DoSnapshot()
 	// create snapshot for demo recording
 	if(m_aDemoRecorder[MAX_CLIENTS].IsRecording())
 	{
-		char aData[CSnapshot::MAX_SIZE];
+		alignas(CSnapshot) char aData[CSnapshot::MAX_SIZE];
 
 		// build snap and possibly add some messages
 		m_SnapshotBuilder.Init();
@@ -920,7 +920,7 @@ void CServer::DoSnapshot()
 			GameServer()->OnSnap(i);
 
 			// finish snapshot
-			char aData[CSnapshot::MAX_SIZE];
+			alignas(CSnapshot) char aData[CSnapshot::MAX_SIZE];
 			CSnapshot *pData = (CSnapshot *)aData; // Fix compiler warning for strict-aliasing
 			int SnapshotSize = m_SnapshotBuilder.Finish(pData);
 
@@ -960,7 +960,7 @@ void CServer::DoSnapshot()
 			// create delta
 			m_SnapshotDelta.SetStaticsize(protocol7::NETEVENTTYPE_SOUNDWORLD, m_aClients[i].m_Sixup);
 			m_SnapshotDelta.SetStaticsize(protocol7::NETEVENTTYPE_DAMAGE, m_aClients[i].m_Sixup);
-			char aDeltaData[CSnapshot::MAX_SIZE];
+			alignas(CSnapshotDelta::CData) char aDeltaData[CSnapshot::MAX_SIZE];
 			int DeltaSize = m_SnapshotDelta.CreateDelta(pDeltashot, pData, aDeltaData);
 
 			if(DeltaSize)

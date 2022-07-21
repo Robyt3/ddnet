@@ -1985,8 +1985,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				{
 					static CSnapshot Emptysnap;
 					CSnapshot *pDeltaShot = &Emptysnap;
-					unsigned char aTmpBuffer2[CSnapshot::MAX_SIZE];
-					unsigned char aTmpBuffer3[CSnapshot::MAX_SIZE];
+					alignas(CSnapshotDelta::CData) unsigned char aTmpBuffer2[CSnapshot::MAX_SIZE];
+					alignas(CSnapshot) unsigned char aTmpBuffer3[CSnapshot::MAX_SIZE];
 					CSnapshot *pTmpBuffer3 = (CSnapshot *)aTmpBuffer3; // Fix compiler warning for strict-aliasing
 
 					// reset snapshoting
@@ -2079,7 +2079,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					m_aSnapshotStorage[Conn].PurgeUntil(PurgeTick);
 
 					// create a verified and unpacked snapshot
-					unsigned char aAltSnapBuffer[CSnapshot::MAX_SIZE];
+					alignas(CSnapshot) unsigned char aAltSnapBuffer[CSnapshot::MAX_SIZE];
 					CSnapshot *pAltSnapBuffer = (CSnapshot *)aAltSnapBuffer;
 					const int AltSnapSize = UnpackAndValidateSnapshot(pTmpBuffer3, pAltSnapBuffer);
 					if(AltSnapSize < 0)
@@ -2094,7 +2094,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					if(!Dummy)
 					{
 						// for antiping: if the projectile netobjects from the server contains extra data, this is removed and the original content restored before recording demo
-						unsigned char aExtraInfoRemoved[CSnapshot::MAX_SIZE];
+						alignas(CSnapshot) unsigned char aExtraInfoRemoved[CSnapshot::MAX_SIZE];
 						mem_copy(aExtraInfoRemoved, pTmpBuffer3, SnapSize);
 						SnapshotRemoveExtraProjectileInfo(aExtraInfoRemoved);
 
@@ -2579,7 +2579,7 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 	m_aPrevGameTick[g_Config.m_ClDummy] = pInfo->m_PreviousTick;
 
 	// create a verified and unpacked snapshot
-	unsigned char aAltSnapBuffer[CSnapshot::MAX_SIZE];
+	alignas(CSnapshot) unsigned char aAltSnapBuffer[CSnapshot::MAX_SIZE];
 	CSnapshot *pAltSnapBuffer = (CSnapshot *)aAltSnapBuffer;
 	const int AltSnapSize = UnpackAndValidateSnapshot((CSnapshot *)pData, pAltSnapBuffer);
 	if(AltSnapSize < 0)
