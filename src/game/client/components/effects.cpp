@@ -264,7 +264,7 @@ void CEffects::Explosion(vec2 Pos, float Alpha)
 		p.m_Spr = SPRITE_PART_SMOKE;
 		p.m_Pos = Pos;
 		p.m_Vel = random_direction() * (random_float(1.0f, 1.2f) * 1000.0f);
-		p.m_LifeSpan = random_float(0.5f, 0.9f);
+		p.m_LifeSpan = random_float(0.5f, 0.9f) * 100.0f;
 		p.m_StartSize = random_float(32.0f, 40.0f);
 		p.m_EndSize = 0;
 		p.m_Gravity = random_float(-800.0f);
