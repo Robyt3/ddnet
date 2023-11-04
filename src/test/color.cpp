@@ -3,23 +3,23 @@
 
 #include <base/color.h>
 
-TEST(Color, HRHConv)
+TEST(Color, HslToRgbToHslConv)
 {
-	for(int i = 0; i < 0xFFFFFF; i += 0xFF)
+	for(int i = 0; i <= 0xFFFFFF; i += 0xFF)
 	{
-		ColorHSLA hsl = i;
-		ColorRGBA rgb = color_cast<ColorRGBA>(hsl);
-		ColorHSLA hsl2 = color_cast<ColorHSLA>(rgb);
+		ColorHSLA OldHsl = i;
+		ColorRGBA ConvertedRgb = color_cast<ColorRGBA>(OldHsl);
+		ColorHSLA NewHsl = color_cast<ColorHSLA>(ConvertedRgb);
 
-		if(hsl.s == 0.0f || hsl.s == 1.0f)
-			EXPECT_FLOAT_EQ(hsl.l, hsl2.l);
-		else if(hsl.l == 0.0f || hsl.l == 1.0f)
-			EXPECT_FLOAT_EQ(hsl.l, hsl2.l);
+		if(OldHsl.s == 0.0f || OldHsl.s == 1.0f)
+			ASSERT_FLOAT_EQ(OldHsl.l, NewHsl.l);
+		else if(OldHsl.l == 0.0f || OldHsl.l == 1.0f)
+			ASSERT_FLOAT_EQ(OldHsl.l, NewHsl.l);
 		else
 		{
-			EXPECT_NEAR(std::fmod(hsl.h, 1.0f), std::fmod(hsl2.h, 1.0f), 0.001f);
-			EXPECT_NEAR(hsl.s, hsl2.s, 0.0001f);
-			EXPECT_FLOAT_EQ(hsl.l, hsl2.l);
+			ASSERT_NEAR(std::fmod(OldHsl.h, 1.0f), std::fmod(NewHsl.h, 1.0f), 0.001f);
+			ASSERT_NEAR(OldHsl.s, NewHsl.s, 0.0001f);
+			ASSERT_FLOAT_EQ(OldHsl.l, NewHsl.l);
 		}
 	}
 }
@@ -37,5 +37,80 @@ TEST(Color, ConvKeepsAlpha)
 		EXPECT_FLOAT_EQ(color_cast<ColorHSLA>(ColorHSVA(0.1f, 0.2f, 0.3f, Alpha)).a, Alpha);
 		EXPECT_FLOAT_EQ(color_cast<ColorHSVA>(ColorRGBA(0.1f, 0.2f, 0.3f, Alpha)).a, Alpha);
 		EXPECT_FLOAT_EQ(color_cast<ColorHSVA>(ColorHSLA(0.1f, 0.2f, 0.3f, Alpha)).a, Alpha);
+	}
+}
+
+TEST(Color, HslToRgbToHslConvPacked)
+{
+	for(int i = 0; i <= 0xFFFFFF; i += 0xFF)
+	{
+		ColorHSLA OldHsl = i;
+		ColorRGBA ConvertedRgb = color_cast<ColorRGBA>(OldHsl);
+		ColorHSLA NewHsl = color_cast<ColorHSLA>(ConvertedRgb);
+		ASSERT_EQ(OldHsl.Pack(false), NewHsl.Pack(false));
+	}
+}
+
+TEST(Color, HslToHsvToHslConv)
+{
+	for(int i = 0; i <= 0xFFFFFF; i += 0xFF)
+	{
+		ColorHSLA OldHsl = i;
+		ColorHSVA ConvertedHsv = color_cast<ColorHSVA>(OldHsl);
+		ColorHSLA NewHsl = color_cast<ColorHSLA>(ConvertedHsv);
+
+		if(OldHsl.s == 0.0f || OldHsl.s == 1.0f)
+			ASSERT_FLOAT_EQ(OldHsl.l, NewHsl.l);
+		else if(OldHsl.l == 0.0f || OldHsl.l == 1.0f)
+			ASSERT_FLOAT_EQ(OldHsl.l, NewHsl.l);
+		else
+		{
+			ASSERT_NEAR(std::fmod(OldHsl.h, 1.0f), std::fmod(NewHsl.h, 1.0f), 0.001f);
+			ASSERT_NEAR(OldHsl.s, NewHsl.s, 0.0001f);
+			ASSERT_FLOAT_EQ(OldHsl.l, NewHsl.l);
+		}
+	}
+}
+
+TEST(Color, HslToHsvToHslConvPacked)
+{
+	for(int i = 0; i < 0xFFFFFF; i += 0xFF)
+	{
+		ColorHSLA OldHsl = i;
+		ColorHSVA ConvertedHsv = color_cast<ColorHSVA>(OldHsl);
+		ColorHSLA NewHsl = color_cast<ColorHSLA>(ConvertedHsv);
+		ASSERT_EQ(OldHsl.Pack(false), NewHsl.Pack(false));
+	}
+}
+
+TEST(Color, HsvToHslToHsvConv)
+{
+	for(int i = 0; i <= 0xFFFFFF; i += 0xFF)
+	{
+		ColorHSVA OldHsv = i;
+		ColorHSLA ConvertedHsl = color_cast<ColorHSLA>(OldHsv);
+		ColorHSVA NewHsv = color_cast<ColorHSVA>(ConvertedHsl);
+
+		if(OldHsv.s == 0.0f || OldHsv.s == 1.0f)
+			ASSERT_FLOAT_EQ(OldHsv.v, NewHsv.v);
+		else if(OldHsv.v == 0.0f || OldHsv.v == 1.0f)
+			ASSERT_FLOAT_EQ(OldHsv.v, NewHsv.v);
+		else
+		{
+			ASSERT_NEAR(std::fmod(OldHsv.h, 1.0f), std::fmod(NewHsv.h, 1.0f), 0.001f);
+			ASSERT_NEAR(OldHsv.s, NewHsv.s, 0.0001f);
+			ASSERT_FLOAT_EQ(OldHsv.v, NewHsv.v);
+		}
+	}
+}
+
+TEST(Color, HsvToHslToHsvConvPacked)
+{
+	for(int i = 0; i <= 0xFFFFFF; i += 0xFF)
+	{
+		ColorHSVA OldHsv = i;
+		ColorHSLA ConvertedHsl = color_cast<ColorHSLA>(OldHsv);
+		ColorHSVA NewHsv = color_cast<ColorHSVA>(ConvertedHsl);
+		ASSERT_EQ(OldHsv.Pack(false), NewHsv.Pack(false));
 	}
 }
