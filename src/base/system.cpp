@@ -4175,68 +4175,6 @@ bool is_process_alive(PROCESS process)
 #endif
 }
 
-int open_link(const char *link)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_link = windows_utf8_to_wide(link);
-
-	SHELLEXECUTEINFOW info;
-	mem_zero(&info, sizeof(SHELLEXECUTEINFOW));
-	info.cbSize = sizeof(SHELLEXECUTEINFOW);
-	info.lpVerb = NULL; // NULL to use the default verb, as "open" may not be available
-	info.lpFile = wide_link.c_str();
-	info.nShow = SW_SHOWNORMAL;
-	// The SEE_MASK_NOASYNC flag ensures that the ShellExecuteEx function
-	// finishes its DDE conversation before it returns, so it's not necessary
-	// to pump messages in the calling thread.
-	// The SEE_MASK_FLAG_NO_UI flag suppresses error messages that would pop up
-	// when the link cannot be opened, e.g. when a folder does not exist.
-	// The SEE_MASK_ASYNCOK flag is not used. It would allow the call to
-	// ShellExecuteEx to return earlier, but it also prevents us from doing
-	// our own error handling, as the function would always return TRUE.
-	info.fMask = SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI;
-	// Save and restore the FPU control word because ShellExecute might change it
-	fenv_t floating_point_environment;
-	int fegetenv_result = fegetenv(&floating_point_environment);
-	BOOL success = ShellExecuteExW(&info);
-	if(fegetenv_result == 0)
-		fesetenv(&floating_point_environment);
-	return success;
-#elif defined(CONF_PLATFORM_LINUX)
-	const int pid = fork();
-	if(pid == 0)
-		execlp("xdg-open", "xdg-open", link, nullptr);
-	return pid > 0;
-#elif defined(CONF_FAMILY_UNIX)
-	const int pid = fork();
-	if(pid == 0)
-		execlp("open", "open", link, nullptr);
-	return pid > 0;
-#endif
-}
-
-int open_file(const char *path)
-{
-#if defined(CONF_PLATFORM_MACOS)
-	return open_link(path);
-#else
-	// Create a file link so the path can contain forward and
-	// backward slashes. But the file link must be absolute.
-	char buf[512];
-	char workingDir[IO_MAX_PATH_LENGTH];
-	if(fs_is_relative_path(path))
-	{
-		if(!fs_getcwd(workingDir, sizeof(workingDir)))
-			return 0;
-		str_append(workingDir, "/");
-	}
-	else
-		workingDir[0] = '\0';
-	str_format(buf, sizeof(buf), "file://%s%s", workingDir, path);
-	return open_link(buf);
-#endif
-}
-
 struct SECURE_RANDOM_DATA
 {
 	int initialized;

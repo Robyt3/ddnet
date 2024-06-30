@@ -2584,34 +2584,6 @@ int kill_process(PROCESS process);
 bool is_process_alive(PROCESS process);
 
 /**
- * Opens a link in the browser.
- *
- * @ingroup Shell
- *
- * @param link The link to open in a browser.
- *
- * @return `1` on success, `0` on failure.
- *
- * @remark The strings are treated as zero-terminated strings.
- * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
- */
-int open_link(const char *link);
-
-/**
- * Opens a file or directory with default program.
- *
- * @ingroup Shell
- *
- * @param path The path to open.
- *
- * @return `1` on success, `0` on failure.
- *
- * @remark The strings are treated as zero-terminated strings.
- * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
- */
-int open_file(const char *path);
-
-/**
  * @defgroup Secure-Random
  * Secure random number generation.
  */

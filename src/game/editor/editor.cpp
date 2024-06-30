@@ -5396,7 +5396,7 @@ void CEditor::RenderFileDialog()
 		{
 			char aOpenPath[IO_MAX_PATH_LENGTH];
 			Storage()->GetCompletePath(m_FilesSelectedIndex >= 0 ? m_vpFilteredFileList[m_FilesSelectedIndex]->m_StorageType : IStorage::TYPE_SAVE, m_pFileDialogPath, aOpenPath, sizeof(aOpenPath));
-			if(!open_file(aOpenPath))
+			if(!Client()->ViewFile(aOpenPath))
 			{
 				ShowFileDialogError("Failed to open the directory '%s'.", aOpenPath);
 			}

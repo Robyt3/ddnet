@@ -4781,6 +4781,35 @@ int CClient::UdpConnectivity(int NetType)
 	return Connectivity;
 }
 
+bool CClient::ViewLink(const char *pLink)
+{
+	if(SDL_OpenURL(pLink) == 0)
+	{
+		return true;
+	}
+	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
+	return false;
+}
+
+bool CClient::ViewFile(const char *pFilename)
+{
+	// Create a file link so the path can contain forward and
+	// backward slashes. But the file link must be absolute.
+	char aWorkingDir[IO_MAX_PATH_LENGTH];
+	if(fs_is_relative_path(pFilename))
+	{
+		if(!fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+			return 0;
+		str_append(aWorkingDir, "/");
+	}
+	else
+		aWorkingDir[0] = '\0';
+
+	char aFileLink[IO_MAX_PATH_LENGTH];
+	str_format(aFileLink, sizeof(aFileLink), "file://%s%s", aWorkingDir, pFilename);
+	return ViewLink(aFileLink);
+}
+
 #if defined(CONF_FAMILY_WINDOWS)
 void CClient::ShellRegister()
 {
