@@ -957,25 +957,24 @@ IStorage *CreateStorage(IStorage::EInitializationType InitializationType, int Nu
 	return CStorage::Create(InitializationType, NumArgs, ppArguments);
 }
 
-IStorage *CreateLocalStorage()
+std::unique_ptr<IStorage> CreateLocalStorage()
 {
-	CStorage *pStorage = new CStorage();
+	std::unique_ptr<CStorage> pStorage = std::make_unique<CStorage>();
 	if(!pStorage->FindCurrentDirectory() ||
 		!pStorage->AddPath("$CURRENTDIR"))
 	{
-		delete pStorage;
-		return nullptr;
+		return std::unique_ptr<IStorage>(nullptr);
 	}
+	pStorage->AddPath("$CURRENTDIR");
 	return pStorage;
 }
 
-IStorage *CreateTempStorage(const char *pDirectory)
+std::unique_ptr<IStorage> CreateTempStorage(const char *pDirectory)
 {
-	CStorage *pStorage = new CStorage();
+	std::unique_ptr<CStorage> pStorage = std::make_unique<CStorage>();
 	if(!pStorage->AddPath(pDirectory))
 	{
-		delete pStorage;
-		return nullptr;
+		return std::unique_ptr<IStorage>(nullptr);
 	}
 	return pStorage;
 }
