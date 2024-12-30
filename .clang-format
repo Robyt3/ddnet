@@ -46,6 +46,7 @@ IndentWidth: 8
 KeepEmptyLinesAtTheStartOfBlocks: false
 PointerAlignment: Right
 ReflowComments: true
+RemoveSemicolon: true
 SpaceBeforeParens: Never
 SpaceAfterTemplateKeyword: false
 TabWidth: 8

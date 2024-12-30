@@ -115,7 +115,7 @@ public:
 		{
 			m_Input.m_TargetY = m_LatestInput.m_TargetY = -1;
 		}
-	};
+	}
 	int GetJumped() { return m_Core.m_Jumped; }
 	int GetAttackTick() { return m_AttackTick; }
 	int GetStrongWeakId() { return m_StrongWeakId; }
