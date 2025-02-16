@@ -721,9 +721,7 @@ void CTouchControls::OnWindowResize()
 
 bool CTouchControls::OnTouchState(const std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
 {
-	if(!g_Config.m_ClTouchControls)
-		return false;
-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	if(!Enabled())
 		return false;
 	if(GameClient()->m_Chat.IsActive() ||
 		GameClient()->m_GameConsole.IsActive() ||
@@ -741,9 +739,7 @@ bool CTouchControls::OnTouchState(const std::vector<IInput::CTouchFingerState> &
 
 void CTouchControls::OnRender()
 {
-	if(!g_Config.m_ClTouchControls)
-		return;
-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	if(!Enabled())
 		return;
 	if(GameClient()->m_Chat.IsActive() ||
 		GameClient()->m_Emoticon.IsActive() ||
@@ -1106,6 +1102,21 @@ vec2 CTouchControls::CalculateScreenSize() const
 	const float ScreenHeight = 400.0f * 3.0f;
 	const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
 	return vec2(ScreenWidth, ScreenHeight);
+}
+
+bool CTouchControls::Enabled() const
+{
+	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		return false;
+	}
+#if defined(CONF_VIDEORECORDER)
+	if(IVideo::Current())
+	{
+		return g_Config.m_ClVideoTouchControls;
+	}
+#endif
+	return g_Config.m_ClTouchControls;
 }
 
 bool CTouchControls::ParseConfiguration(const void *pFileData, unsigned FileLength)

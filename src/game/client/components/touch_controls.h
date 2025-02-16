@@ -547,6 +547,7 @@ private:
 	void ResetButtons();
 	void RenderButtons();
 	vec2 CalculateScreenSize() const;
+	bool Enabled() const;
 
 	bool ParseConfiguration(const void *pFileData, unsigned FileLength);
 	std::optional<EDirectTouchIngameMode> ParseDirectTouchIngameMode(const json_value *pModeValue);
