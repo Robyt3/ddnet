@@ -1,9 +1,11 @@
 #!/bin/bash
+set -e
 
 ANDROID_HOME=~/Android/Sdk
 ANDROID_NDK="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
 
-export MAKEFLAGS=-j32
+MAKEFLAGS=-j$(nproc)
+export MAKEFLAGS
 
 export CXXFLAGS="$3"
 export CFLAGS="$3"
@@ -31,9 +33,9 @@ function buid_openssl() {
 				../Configure "$2" no-asm no-shared
 			fi
 		fi
-		${5} make $MAKEFLAGS build_generated
-		${5} make $MAKEFLAGS libcrypto.a
-		${5} make $MAKEFLAGS libssl.a
+		${5} make "${MAKEFLAGS}" build_generated
+		${5} make "${MAKEFLAGS}" libcrypto.a
+		${5} make "${MAKEFLAGS}" libssl.a
 		cd ..
 	)
 }

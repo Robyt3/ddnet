@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 ANDROID_HOME=~/Android/Sdk
 ANDROID_NDK_HOME="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
@@ -7,13 +8,13 @@ export ANDROID_NDK_HOME
 MAKEFLAGS=-j$(nproc)
 export MAKEFLAGS
 
+COMPILEFLAGS=$3
+LINKFLAGS=$4
+
 if [[ "${2}" == "webasm" ]]; then
 	COMPILEFLAGS="-pthread -O3 -g -s USE_PTHREADS=1"
 	LINKFLAGS="-pthread -O3 -g -s USE_PTHREADS=1 -s ASYNCIFY=1"
 fi
-
-COMPILEFLAGS=$3
-LINKFLAGS=$4
 
 function compile_source_android() {
 	cmake \
@@ -61,7 +62,8 @@ function compile_source_webasm() {
 		-DFT_REQUIRE_ZLIB=TRUE \
 		-DCMAKE_C_FLAGS="$COMPILEFLAGS -DGLEW_STATIC" -DCMAKE_CXX_FLAGS="$COMPILEFLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$COMPILEFLAGS" -DCMAKE_C_FLAGS_RELEASE="$COMPILEFLAGS" \
 		-DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" -DCMAKE_SHARED_LINKER_FLAGS_RELEASE="$LINKFLAGS" \
-		-DSDL_PTHREADS=ON -DSDL_THREADS=ON \
+		-DSDL_PTHREADS=ON \
+		-DSDL_THREADS=ON \
 		-DCURL_USE_OPENSSL=ON \
 		-DOPUS_HARDENING=OFF \
 		-DOPUS_STACK_PROTECTOR=OFF \
@@ -77,13 +79,11 @@ function compile_source_webasm() {
 }
 
 if [[ "${2}" == "android" ]]; then
-	compile_source_android "$1" build_android_arm armeabi-v7a &
-	compile_source_android "$1" build_android_arm64 arm64-v8a &
-	compile_source_android "$1" build_android_x86 x86 &
-	compile_source_android "$1" build_android_x86_64 x86_64 &
+	compile_source_android "$1" build_android_arm armeabi-v7a
+	compile_source_android "$1" build_android_arm64 arm64-v8a
+	compile_source_android "$1" build_android_x86 x86
+	compile_source_android "$1" build_android_x86_64 x86_64
 elif [[ "${2}" == "webasm" ]]; then
 	sed -i "s/include(CheckSizes)//g" CMakeLists.txt
-	compile_source_webasm "$1" build_webasm_wasm wasm &
+	compile_source_webasm "$1" build_webasm_wasm wasm
 fi
-
-wait

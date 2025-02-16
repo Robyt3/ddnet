@@ -1,9 +1,8 @@
 #!/bin/bash
+set -e
 
 ANDROID_HOME=~/Android/Sdk
 ANDROID_NDK="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
-
-export MAKEFLAGS=-j32
 
 export CXXFLAGS="$3"
 export CFLAGS="$3"
@@ -21,10 +20,10 @@ function make_sqlite3() {
 
 		TMP_COMPILER=""
 		TMP_AR=""
-		if [[ "${5}" == "android" ]]; then
-			TMP_COMPILER="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/$3$4-clang"
+		if [[ "${4}" == "android" ]]; then
+			TMP_COMPILER="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/$2$3-clang"
 			TMP_AR="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-		elif [[ "${5}" == "webasm" ]]; then
+		elif [[ "${4}" == "webasm" ]]; then
 			TMP_COMPILER="emcc"
 			TMP_AR="emar"
 		fi
@@ -52,12 +51,12 @@ function make_sqlite3() {
 
 function compile_all_sqlite3() {
 	if [[ "${2}" == "android" ]]; then
-		make_sqlite3 build_"$2"_arm build_"$2"_arm armv7a-linux-androideabi "$1" "$2"
-		make_sqlite3 build_"$2"_arm64 build_"$2"_arm64 aarch64-linux-android "$1" "$2"
-		make_sqlite3 build_"$2"_x86 build_"$2"_x86 i686-linux-android "$1" "$2"
-		make_sqlite3 build_"$2"_x86_64 build_"$2"_x86_64 x86_64-linux-android "$1" "$2"
+		make_sqlite3 build_"$2"_arm armv7a-linux-androideabi "$1" "$2"
+		make_sqlite3 build_"$2"_arm64 aarch64-linux-android "$1" "$2"
+		make_sqlite3 build_"$2"_x86 i686-linux-android "$1" "$2"
+		make_sqlite3 build_"$2"_x86_64 x86_64-linux-android "$1" "$2"
 	elif [[ "${2}" == "webasm" ]]; then
-		make_sqlite3 build_"$2"_wasm build_"$2"_wasm "" "$1" "$2"
+		make_sqlite3 build_"$2"_wasm "" "$1" "$2"
 	fi
 }
 

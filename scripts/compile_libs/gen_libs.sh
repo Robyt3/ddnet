@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 CURDIR="$PWD"
 if [ -z ${1+x} ]; then
@@ -67,7 +68,7 @@ function build_cmake_lib() {
 mkdir -p compile_libs
 cd compile_libs || exit 1
 
-# start with openssl
+# openssl
 (
 	if [ ! -d "openssl" ]; then
 		git clone https://github.com/openssl/openssl openssl
@@ -85,8 +86,9 @@ build_cmake_lib curl https://github.com/curl/curl "curl-8_8_0"
 build_cmake_lib freetype2 https://gitlab.freedesktop.org/freetype/freetype
 build_cmake_lib sdl https://github.com/libsdl-org/SDL SDL2
 build_cmake_lib ogg https://github.com/xiph/ogg
-build_cmake_lib opus https://github.com/xiph/opus
 
+# opus
+build_cmake_lib opus https://github.com/xiph/opus
 (
 	_WAS_THERE_OPUSFILE=1
 	if [ ! -d "opusfile" ]; then
@@ -101,17 +103,50 @@ build_cmake_lib opus https://github.com/xiph/opus
 	./make_lib_opusfile.sh "$ANDROID_API_LEVEL" "$OS_NAME" "$COMPILEFLAGS" "$LINKFLAGS"
 )
 
-# SQLite, just download and built by hand
-if [ ! -d "sqlite3" ]; then
-	wget https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip
-	7z e sqlite-amalgamation-3360000.zip -osqlite3
-fi
-
+# SQLite
 (
-	cd sqlite3 || exit 1
-	cp "${CURDIR}"/scripts/compile_libs/make_lib_sqlite3.sh make_lib_sqlite3.sh
-	./make_lib_sqlite3.sh "$ANDROID_API_LEVEL" "$OS_NAME" "$COMPILEFLAGS" "$LINKFLAGS"
+	if [ ! -d "sqlite3" ]; then
+		SQLITE_ARCHIVE_FILENAME="sqlite-amalgamation-3360000.zip"
+		wget "https://www.sqlite.org/2021/${SQLITE_ARCHIVE_FILENAME}"
+		7z e "${SQLITE_ARCHIVE_FILENAME}" -osqlite3
+		rm "${SQLITE_ARCHIVE_FILENAME}"
+	fi
+	(
+		cd sqlite3 || exit 1
+		cp "${CURDIR}"/scripts/compile_libs/make_lib_sqlite3.sh make_lib_sqlite3.sh
+		./make_lib_sqlite3.sh "$ANDROID_API_LEVEL" "$OS_NAME" "$COMPILEFLAGS" "$LINKFLAGS"
+	)
 )
+
+if [[ "$OS_NAME" == "android" ]]; then
+	# x264
+	if [ ! -d "x264" ]; then
+		X264_ARCHIVE_FILENAME="x264-master.tar.bz2"
+		wget "https://code.videolan.org/videolan/x264/-/archive/master/${X264_ARCHIVE_FILENAME}"
+		tar xvf "${X264_ARCHIVE_FILENAME}"
+		mv x264-master x264
+		rm "${X264_ARCHIVE_FILENAME}"
+	fi
+	(
+		cd x264 || exit 1
+		cp "${CURDIR}"/scripts/compile_libs/make_lib_x264.sh make_lib_x264.sh
+		./make_lib_x264.sh "$ANDROID_API_LEVEL" "$OS_NAME"
+	)
+
+	# ffmpeg
+	if [ ! -d "ffmpeg" ]; then
+		FFMPEG_ARCHIVE_FILENAME="ffmpeg-7.0.1.tar.gz"
+		wget "https://ffmpeg.org/releases/${FFMPEG_ARCHIVE_FILENAME}"
+		tar xvf "${FFMPEG_ARCHIVE_FILENAME}"
+		mv ffmpeg-7.0.1 ffmpeg
+		rm "${X264_ARCHIVE_FILENAME}"
+	fi
+	(
+		cd ffmpeg || exit 1
+		cp "${CURDIR}"/scripts/compile_libs/make_lib_ffmpeg.sh make_lib_ffmpeg.sh
+		./make_lib_ffmpeg.sh "$ANDROID_API_LEVEL" "$OS_NAME"
+	)
+fi
 
 cd ..
 mkdir -p ddnet-libs
