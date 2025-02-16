@@ -5,7 +5,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   pkg_check_modules(PC_AVUTIL libavutil)
   pkg_check_modules(PC_SWSCALE libswscale)
   pkg_check_modules(PC_SWRESAMPLE libswresample)
-  if(TARGET_OS STREQUAL "linux")
+  if(TARGET_OS STREQUAL "linux" OR TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "emscripten")
     pkg_search_module(PC_X264 libx264 x264)
   endif()
 endif()
@@ -46,7 +46,7 @@ find_library(SWRESAMPLE_LIBRARY
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
-if(TARGET_OS STREQUAL "linux")
+if(TARGET_OS STREQUAL "linux" OR TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "emscripten")
   find_library(X264_LIBRARY
     NAMES x264 libx264
     HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_X264_LIBRARY_DIRS}
@@ -90,7 +90,7 @@ find_path(SWRESAMPLE_INCLUDEDIR libswresample
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
-if(TARGET_OS STREQUAL "linux")
+if(TARGET_OS STREQUAL "linux" OR TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "emscripten")
   set_extra_dirs_include(X264 x264 "${X264_LIBRARY}")
 endif()
 
@@ -129,7 +129,7 @@ set(FFMPEG_LIBRARIES
   ${SWRESAMPLE_LIBRARY}
 )
 
-if(TARGET_OS STREQUAL "linux")
+if(TARGET_OS STREQUAL "linux" OR TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "emscripten")
   list(APPEND FFMPEG_LIBRARIES ${X264_LIBRARY})
 endif()
 
