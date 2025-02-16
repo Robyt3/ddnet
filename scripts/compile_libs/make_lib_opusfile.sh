@@ -1,61 +1,75 @@
 #!/bin/bash
+set -e
 
-ANDROID_HOME=~/Android/Sdk
-ANDROID_NDK="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# shellcheck source=scripts/android/_android_build_common.sh
+source "${SCRIPT_DIR}/../android/_android_build_common.sh"
 
-export MAKEFLAGS=-j32
+TARGET_PLATFORM="${1}"
+export TARGET_PLATFORM
 
-export CXXFLAGS="$3"
-export CFLAGS="$3"
-export CPPFLAGS="$4"
-export LDFLAGS="$4"
-
-export ANDROID_NDK_ROOT="$ANDROID_NDK"
+# TODO: move to common file
+export CXXFLAGS="${2}"
+export CFLAGS="${2}"
+export CPPFLAGS="${3}"
+export LDFLAGS="${3}"
 
 function make_opusfile() {
-	_EXISTS_PROJECT=0
-	if [ -d "$1" ]; then
-		_EXISTS_PROJECT=1
-	else
-		mkdir "$1"
+	local build_folder="${1}"
+	local build_android_triple="${2}"
+
+	local library_path
+	library_path=$(realpath "..")
+	local ogg_include_path="${library_path}/ogg/include"
+	if [ ! -d "${ogg_include_path}" ]; then
+		print "ERROR: download ogg first, include folder expected at ${ogg_include_path}"
+		exit 1
 	fi
+	local opus_include_path="${library_path}/opus/include"
+	if [ ! -d "${opus_include_path}" ]; then
+		print "ERROR: download opus for first, include folder expected at ${opus_include_path}"
+		exit 1
+	fi
+	local ogg_include_path_build="${library_path}/ogg/${build_folder}/include"
+	if [ ! -d "${ogg_include_path_build}" ]; then
+		print "ERROR: compile ogg for ${build_android_triple} first, include folder expected at ${ogg_include_path_build}"
+		exit 1
+	fi
+
+	mkdir -p "${build_folder}"
 	(
-		cd "$1" || exit 1
-		if [[ "$_EXISTS_PROJECT" == 0 ]]; then
-			#not nice but doesn't matter
-			cp -R ../../ogg/include .
-			cp -R ../../opus/include .
-			cp -R ../../ogg/"$2"/include/ogg/* include/ogg/
-			cp ../../ogg/"$2"/libogg.a libogg.a
-			cp ../../opus/"$2"/libopus.a libopus.a
+		cd "${build_folder}"
+
+		local cc=""
+		local ar=""
+		if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+			cc="${ANDROID_TOOLCHAIN_ROOT}/bin/${build_android_triple}${ANDROID_API}-clang"
+			ar="${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-ar"
+		elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+			cc="emcc"
+			ar="emar"
 		fi
 
-		TMP_COMPILER=""
-		TMP_AR=""
-		if [[ "${5}" == "android" ]]; then
-			TMP_COMPILER="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/$3$4-clang"
-			TMP_AR="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-		elif [[ "${5}" == "webasm" ]]; then
-			TMP_COMPILER="emcc"
-			TMP_AR="emar"
-		fi
-
-		${TMP_COMPILER} \
+		${cc} \
 			-c \
 			-fPIC \
 			-I"${PWD}"/../include \
-			-I"${PWD}"/include \
+			-I"${ogg_include_path}" \
+			-I"${opus_include_path}" \
+			-I"${ogg_include_path_build}" \
 			../src/opusfile.c \
 			../src/info.c \
 			../src/internal.c
-		${TMP_COMPILER} \
+		${cc} \
 			-c \
 			-fPIC \
 			-I"${PWD}"/../include \
-			-I"${PWD}"/include \
+			-I"${ogg_include_path}" \
+			-I"${opus_include_path}" \
+			-I"${ogg_include_path_build}" \
 			-include stdio.h \
 			../src/stream.c
-		${TMP_AR} \
+		${ar} \
 			rvs \
 			libopusfile.a \
 			opusfile.o \
@@ -65,15 +79,18 @@ function make_opusfile() {
 	)
 }
 
-function compile_all_opusfile() {
-	if [[ "${2}" == "android" ]]; then
-		make_opusfile build_"$2"_arm build_"$2"_arm armv7a-linux-androideabi "$1" "$2"
-		make_opusfile build_"$2"_arm64 build_"$2"_arm64 aarch64-linux-android "$1" "$2"
-		make_opusfile build_"$2"_x86 build_"$2"_x86 i686-linux-android "$1" "$2"
-		make_opusfile build_"$2"_x86_64 build_"$2"_x86_64 x86_64-linux-android "$1" "$2"
-	elif [[ "${2}" == "webasm" ]]; then
-		make_opusfile build_"$2"_wasm build_"$2"_wasm "" "$1" "$2"
+function make_all_opusfile() {
+	if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+		make_opusfile build_android_arm "${ANDROID_ARM_TRIPLE}"
+		make_opusfile build_android_arm64 "${ANDROID_ARM64_TRIPLE}"
+		make_opusfile build_android_x86 "${ANDROID_X86_TRIPLE}"
+		make_opusfile build_android_x86_64 "${ANDROID_X64_TRIPLE}"
+	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+		make_opusfile build_webasm_wasm ""
+	else
+		print "ERROR: unsupported target platform: ${TARGET_PLATFORM}"
+		exit 1
 	fi
 }
 
-compile_all_opusfile "$1" "$2"
+make_all_opusfile

@@ -1,48 +1,77 @@
 #!/bin/bash
+set -e
 
-ANDROID_HOME=~/Android/Sdk
-ANDROID_NDK="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# shellcheck source=scripts/android/_android_build_common.sh
+source "${SCRIPT_DIR}/../android/_android_build_common.sh"
 
-export MAKEFLAGS=-j32
+TARGET_PLATFORM="${1}"
+export TARGET_PLATFORM
 
-export CXXFLAGS="$3"
-export CFLAGS="$3"
-export CPPFLAGS="$4"
-export LDFLAGS="$4"
+# TODO: move to common file
+export CXXFLAGS="${2}"
+export CFLAGS="${2}"
+export CPPFLAGS="${3}"
+export LDFLAGS="${3}"
 
-export ANDROID_NDK_ROOT=$ANDROID_NDK
-PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin:$PATH
+function make_openssl() {
+	local build_folder="${1}"
+	local build_target_name="${2}"
 
-function buid_openssl() {
-	_EXISTS_PROJECT=0
-	if [ -d "$1" ]; then
-		_EXISTS_PROJECT=1
-	else
-		mkdir "$1"
-	fi
+	mkdir -p "${build_folder}"
 	(
-		cd "$1" || exit 1
-		if [[ "$_EXISTS_PROJECT" == "0" ]]; then
-			if [[ "${4}" == "webasm" ]]; then
-				emconfigure ../Configure "$2" -no-tests -no-asm -static -no-afalgeng -DOPENSSL_SYS_NETWARE -DSIG_DFL=0 -DSIG_IGN=0 -DHAVE_FORK=0 -DOPENSSL_NO_AFALGENG=1 --with-rand-seed=getrandom
+		cd "${build_folder}"
 
+		PATH="${ANDROID_TOOLCHAIN_ROOT}/bin:$PATH"
+		if [ ! -f "./Makefile" ]; then
+			if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+				../Configure "${build_target_name}" \
+					no-asm \
+					no-shared \
+					-D__ANDROID_API__="${ANDROID_API}"
+				# We need to define __ANDROID_API__ for the configure script so it will choose the
+				# correct compiler for the selected API version, but we remove it from the build flags
+				# in the Makefile manually because the NDK compiler already defines it and this would
+				# cause a warning due to the macro being redefined.
+				sed -i "s|^CPPFLAGS=-D__ANDROID_API__=${ANDROID_API} -fPIC\$|CPPFLAGS=-fPIC|g" Makefile
+			elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+				emconfigure ../Configure "${build_target_name}" \
+					-no-tests \
+					-no-asm \
+					-static \
+					-no-afalgeng \
+					-DOPENSSL_SYS_NETWARE \
+					-DSIG_DFL=0 \
+					-DSIG_IGN=0 \
+					-DHAVE_FORK=0 \
+					-DOPENSSL_NO_AFALGENG=1 \
+					--with-rand-seed=getrandom
 				sed -i 's|^CROSS_COMPILE.*$|CROSS_COMPILE=|g' Makefile
-			else
-				../Configure "$2" no-asm no-shared
 			fi
 		fi
-		${5} make $MAKEFLAGS build_generated
-		${5} make $MAKEFLAGS libcrypto.a
-		${5} make $MAKEFLAGS libssl.a
-		cd ..
+
+		local make_wrapper=""
+		if [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+			make_wrapper="emmake"
+		fi
+		${make_wrapper} make "${BUILD_FLAGS}" build_generated
+		${make_wrapper} make "${BUILD_FLAGS}" libcrypto.a
+		${make_wrapper} make "${BUILD_FLAGS}" libssl.a
 	)
 }
 
-if [[ "${2}" == "android" ]]; then
-	buid_openssl build_"$2"_arm android-arm "$1" "$2" ""
-	buid_openssl build_"$2"_arm64 android-arm64 "$1" "$2" ""
-	buid_openssl build_"$2"_x86 android-x86 "$1" "$2" ""
-	buid_openssl build_"$2"_x86_64 android-x86_64 "$1" "$2" ""
-elif [[ "${2}" == "webasm" ]]; then
-	buid_openssl build_"$2"_wasm linux-generic64 "$1" "$2" emmake
-fi
+function make_all_openssl() {
+	if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+		make_openssl build_android_arm "android-${ANDROID_ARM_ARCH}"
+		make_openssl build_android_arm64 "android-${ANDROID_ARM64_ARCH}"
+		make_openssl build_android_x86 "android-${ANDROID_X86_ARCH}"
+		make_openssl build_android_x86_64 "android-${ANDROID_X64_ARCH}"
+	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+		make_openssl build_webasm_wasm linux-generic64
+	else
+		print "ERROR: unsupported target platform: ${TARGET_PLATFORM}"
+		exit 1
+	fi
+}
+
+make_all_openssl

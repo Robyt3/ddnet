@@ -1,37 +1,39 @@
 #!/bin/bash
+set -e
 
-ANDROID_HOME=~/Android/Sdk
-ANDROID_NDK="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# shellcheck source=scripts/android/_android_build_common.sh
+source "${SCRIPT_DIR}/../android/_android_build_common.sh"
 
-export MAKEFLAGS=-j32
+TARGET_PLATFORM="${1}"
+export TARGET_PLATFORM
 
-export CXXFLAGS="$3"
-export CFLAGS="$3"
-export CPPFLAGS="$4"
-LINKER_FLAGS="$4"
-
-export ANDROID_NDK_ROOT="$ANDROID_NDK"
-PATH="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin:$PATH"
-_LD_LIBRARY_PATH=".:$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin:$LD_LIBRARY_PATH"
+# TODO: move to common file
+export CXXFLAGS="${2}"
+export CFLAGS="${2}"
+export CPPFLAGS="${3}"
+LDFLAGS="${3} -L./"
+export LDFLAGS
 
 function make_sqlite3() {
-	(
-		mkdir -p "$1"
-		cd "$1" || exit 1
+	local BUILD_FOLDER="${1}"
+	local BUILD_ANDROID_TRIPLE="${2}"
 
-		TMP_COMPILER=""
-		TMP_AR=""
-		if [[ "${5}" == "android" ]]; then
-			TMP_COMPILER="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/$3$4-clang"
-			TMP_AR="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-		elif [[ "${5}" == "webasm" ]]; then
-			TMP_COMPILER="emcc"
-			TMP_AR="emar"
+	mkdir -p "${BUILD_FOLDER}"
+	(
+		cd "${BUILD_FOLDER}"
+
+		CC=""
+		AR=""
+		if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+			CC="${ANDROID_TOOLCHAIN_ROOT}/bin/${BUILD_ANDROID_TRIPLE}${ANDROID_API}-clang"
+			AR="${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-ar"
+		elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+			CC="emcc"
+			AR="emar"
 		fi
 
-		LDFLAGS="${LINKER_FLAGS} -L./" \
-			LD_LIBRARY_PATH="$_LD_LIBRARY_PATH" \
-			${TMP_COMPILER} \
+		${CC} \
 			-c \
 			-fPIC \
 			-DSQLITE_ENABLE_ATOMIC_WRITE=1 \
@@ -41,24 +43,25 @@ function make_sqlite3() {
 			../sqlite3.c \
 			-o sqlite3.o
 
-		LDFLAGS="${LINKER_FLAGS} -L./" \
-			LD_LIBRARY_PATH="$_LD_LIBRARY_PATH" \
-			${TMP_AR} \
+		${AR} \
 			rvs \
 			sqlite3.a \
 			sqlite3.o
 	)
 }
 
-function compile_all_sqlite3() {
-	if [[ "${2}" == "android" ]]; then
-		make_sqlite3 build_"$2"_arm build_"$2"_arm armv7a-linux-androideabi "$1" "$2"
-		make_sqlite3 build_"$2"_arm64 build_"$2"_arm64 aarch64-linux-android "$1" "$2"
-		make_sqlite3 build_"$2"_x86 build_"$2"_x86 i686-linux-android "$1" "$2"
-		make_sqlite3 build_"$2"_x86_64 build_"$2"_x86_64 x86_64-linux-android "$1" "$2"
-	elif [[ "${2}" == "webasm" ]]; then
-		make_sqlite3 build_"$2"_wasm build_"$2"_wasm "" "$1" "$2"
+function make_all_sqlite3() {
+	if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+		make_sqlite3 build_android_arm "${ANDROID_ARM_TRIPLE}"
+		make_sqlite3 build_android_arm64 "${ANDROID_ARM64_TRIPLE}"
+		make_sqlite3 build_android_x86 "${ANDROID_X86_TRIPLE}"
+		make_sqlite3 build_android_x86_64 "${ANDROID_X64_TRIPLE}"
+	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+		make_sqlite3 build_webasm_wasm ""
+	else
+		print "ERROR: unsupported target platform: ${TARGET_PLATFORM}"
+		exit 1
 	fi
 }
 
-compile_all_sqlite3 "$1" "$2"
+make_all_sqlite3

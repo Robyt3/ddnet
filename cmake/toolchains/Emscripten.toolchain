@@ -16,8 +16,12 @@ set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s FULL_ES3=1")
 set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=[\\$autoResumeAudioContext,\\$dynCall]")
 # this flag is the most important one. It tells SDL2 to call emscripten functions when polling event
 set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s ASYNCIFY=1")
-# TODO, has to be fixed in SDL2, can improve responsivness of the site
+# this flag is even more important, otherwise the client hangs on launch because webasm does not support starting a pthread and waiting on it immediately
 #set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s PROXY_TO_PTHREAD=1")
+# also required or "TypeError: GLctx is undefined"
+#set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s OFFSCREEN_FRAMEBUFFER=1")
+# also required or graphics init appears to work but GLew functions are not available --> next problem: "Cannot get context from a canvas that has transferred its control to offscreen."
+#set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s OFFSCREENCANVAS_SUPPORT=1")
 # SDL2 is compiled by the gen_libs.sh script for easy up to date code
 #set(WASM_ENGINE_FLAGS "${WASM_ENGINE_FLAGS} -s USE_SDL=2")
 #set(WASM_CXX_ENGINE_FLAGS "${WASM_CXX_ENGINE_FLAGS} -s USE_SDL=2")

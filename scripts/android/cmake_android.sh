@@ -1,45 +1,13 @@
 #!/bin/bash
 set -e
 
-# Ensure that binaries from MSYS2 are preferred over Windows-native commands like find and sort which work differently.
-PATH="/usr/bin/:$PATH"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# shellcheck source=scripts/android/_android_build_common.sh
+source "${SCRIPT_DIR}/_android_build_common.sh"
 
-# $ANDROID_HOME can be used-defined, else the default location is used. Important notes:
-# - The path must not contain spaces on Windows.
-# - $HOME must be used instead of ~ else cargo-ndk cannot find the folder.
-ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
-export ANDROID_HOME
-
-BUILD_FLAGS="${BUILD_FLAGS:--j$(nproc)}"
-export BUILD_FLAGS
-
-ANDROID_NDK_VERSION="$(cd "$ANDROID_HOME/ndk" && find . -maxdepth 1 | sort -n | tail -1)"
-ANDROID_NDK_VERSION="${ANDROID_NDK_VERSION:2}"
-# ANDROID_NDK_HOME must be exported for cargo-ndk
-export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION"
-
-# ANDROID_API_LEVEL must specify the _minimum_ supported SDK version, otherwise this will cause linking errors at launch
-ANDROID_API_LEVEL=24
 ANDROID_SUB_BUILD_DIR=build_arch
 
-COLOR_RED="\e[1;31m"
-COLOR_YELLOW="\e[1;33m"
-COLOR_CYAN="\e[1;36m"
-COLOR_RESET="\e[0m"
-
 SHOW_USAGE_INFO=0
-
-log_info() {
-	printf "${COLOR_CYAN}%s${COLOR_RESET}\n" "$1"
-}
-
-log_warn() {
-	printf "${COLOR_YELLOW}%s${COLOR_RESET}\n" "$1" 1>&2
-}
-
-log_error() {
-	printf "${COLOR_RED}%s${COLOR_RESET}\n" "$1" 1>&2
-}
 
 if [ -z ${1+x} ]; then
 	SHOW_USAGE_INFO=1
@@ -146,25 +114,25 @@ function build_for_type() {
 	cmake \
 		-H. \
 		-G "Ninja" \
-		-DPREFER_BUNDLED_LIBS=ON \
 		-DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-		-DANDROID_PLATFORM="android-${ANDROID_API_LEVEL}" \
+		-B"${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" \
+		-DANDROID_PLATFORM="android-${ANDROID_API}" \
 		-DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
 		-DANDROID_NDK="$ANDROID_NDK_HOME" \
 		-DANDROID_ABI="${2}" \
 		-DANDROID_ARM_NEON=TRUE \
-		-DANDROID_PACKAGE_NAME="${PACKAGE_NAME//./_}" \
 		-DCMAKE_ANDROID_NDK="$ANDROID_NDK_HOME" \
 		-DCMAKE_SYSTEM_NAME=Android \
-		-DCMAKE_SYSTEM_VERSION="$ANDROID_API_LEVEL" \
+		-DCMAKE_SYSTEM_VERSION="$ANDROID_API" \
 		-DCMAKE_ANDROID_ARCH_ABI="${2}" \
 		-DCARGO_NDK_TARGET="${3}" \
-		-DCARGO_NDK_API="$ANDROID_API_LEVEL" \
-		-B"${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" \
+		-DCARGO_NDK_API="$ANDROID_API" \
+		-DANDROID_PACKAGE_NAME="${PACKAGE_NAME//./_}" \
+		-DCMAKE_CROSSCOMPILING=ON \
+		-DPREFER_BUNDLED_LIBS=ON \
 		-DSERVER=ON \
 		-DTOOLS=OFF \
 		-DDEV=TRUE \
-		-DCMAKE_CROSSCOMPILING=ON \
 		-DVULKAN=ON \
 		-DVIDEORECORDER=OFF
 	(
@@ -285,7 +253,7 @@ mkdir -p src/main/java
 cp -R ../scripts/android/files/java/org src/main/java/
 cp -R ../ddnet-libs/sdl/java/org src/main/java/
 
-# shellcheck disable=SC1091
+# shellcheck source=scripts/android/files/build.sh
 source ./build.sh "$GAME_NAME" "$PACKAGE_NAME" "$BUILD_TYPE"
 
 cd ..

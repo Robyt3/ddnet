@@ -1,37 +1,42 @@
 #!/bin/bash
+set -e
 
-ANDROID_HOME=~/Android/Sdk
-ANDROID_NDK_HOME="$(find "$ANDROID_HOME/ndk" -maxdepth 1 | sort -n | tail -1)"
-export ANDROID_NDK_HOME
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# shellcheck source=scripts/android/_android_build_common.sh
+source "${SCRIPT_DIR}/../android/_android_build_common.sh"
 
-MAKEFLAGS=-j$(nproc)
-export MAKEFLAGS
+TARGET_PLATFORM="${1}"
+export TARGET_PLATFORM
 
-if [[ "${2}" == "webasm" ]]; then
-	COMPILEFLAGS="-pthread -O3 -g -s USE_PTHREADS=1"
-	LINKFLAGS="-pthread -O3 -g -s USE_PTHREADS=1 -s ASYNCIFY=1"
-fi
+COMPILEFLAGS="${2}"
+LINKFLAGS="${3}"
 
-COMPILEFLAGS=$3
-LINKFLAGS=$4
+function make_cmake_android() {
+	local build_folder="${1}"
+	local build_android_abi="${2}"
 
-function compile_source_android() {
+	local openssl_path="${PWD}/../openssl"
+
 	cmake \
 		-H. \
-		-G "Unix Makefiles" \
+		-G "Ninja" \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DANDROID_PLATFORM="android-$1" \
-		-DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-		-DANDROID_NDK="$ANDROID_NDK_HOME" \
-		-DANDROID_ABI="${3}" \
+		-B"${build_folder}" \
+		-DANDROID_PLATFORM="android-${ANDROID_API}" \
+		-DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake" \
+		-DANDROID_NDK="${ANDROID_NDK_HOME}" \
+		-DANDROID_ABI="${build_android_abi}" \
 		-DANDROID_ARM_NEON=TRUE \
-		-DCMAKE_ANDROID_NDK="$ANDROID_NDK_HOME" \
+		-DCMAKE_ANDROID_NDK="${ANDROID_NDK_HOME}" \
 		-DCMAKE_SYSTEM_NAME=Android \
-		-DCMAKE_SYSTEM_VERSION="$1" \
-		-DCMAKE_ANDROID_ARCH_ABI="${3}" \
-		-DCMAKE_C_FLAGS="$COMPILEFLAGS" -DCMAKE_CXX_FLAGS="$COMPILEFLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$COMPILEFLAGS" -DCMAKE_C_FLAGS_RELEASE="$COMPILEFLAGS" \
-		-DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" -DCMAKE_SHARED_LINKER_FLAGS_RELEASE="$LINKFLAGS" \
-		-B"$2" \
+		-DCMAKE_SYSTEM_VERSION="${ANDROID_API}" \
+		-DCMAKE_ANDROID_ARCH_ABI="${build_android_abi}" \
+		-DCMAKE_C_FLAGS="${COMPILEFLAGS}" \
+		-DCMAKE_C_FLAGS_RELEASE="${COMPILEFLAGS}" \
+		-DCMAKE_CXX_FLAGS="${COMPILEFLAGS}" \
+		-DCMAKE_CXX_FLAGS_RELEASE="${COMPILEFLAGS}" \
+		-DCMAKE_SHARED_LINKER_FLAGS="${LINKFLAGS}" \
+		-DCMAKE_SHARED_LINKER_FLAGS_RELEASE="${LINKFLAGS}" \
 		-DBUILD_SHARED_LIBS=OFF \
 		-DHIDAPI_SKIP_LIBUSB=TRUE \
 		-DCURL_USE_OPENSSL=ON \
@@ -39,51 +44,76 @@ function compile_source_android() {
 		-DOP_DISABLE_HTTP=ON \
 		-DOP_DISABLE_EXAMPLES=ON \
 		-DOP_DISABLE_DOCS=ON \
-		-DOPENSSL_ROOT_DIR="$PWD"/../openssl/"$2" \
-		-DOPENSSL_CRYPTO_LIBRARY="$PWD"/../openssl/"$2"/libcrypto.a \
-		-DOPENSSL_SSL_LIBRARY="$PWD"/../openssl/"$2"/libssl.a \
-		-DOPENSSL_INCLUDE_DIR="${PWD}/../openssl/include;${PWD}/../openssl/${2}/include"
+		-DOPENSSL_ROOT_DIR="${openssl_path}/${build_folder}" \
+		-DOPENSSL_CRYPTO_LIBRARY="${openssl_path}/${build_folder}/libcrypto.a" \
+		-DOPENSSL_SSL_LIBRARY="${openssl_path}/${build_folder}/libssl.a" \
+		-DOPENSSL_INCLUDE_DIR="${openssl_path}/include;${openssl_path}/${build_folder}/include"
+
 	(
-		cd "$2" || exit 1
-		cmake --build .
+		cd "${build_folder}"
+		# We want word splitting
+		# shellcheck disable=SC2086
+		cmake --build . $BUILD_FLAGS
 	)
 }
 
-function compile_source_webasm() {
+function make_cmake_webasm() {
+	local build_folder="${1}"
+
+	local openssl_path="${PWD}/../openssl"
+	local zlib_path="${PWD}/../zlib"
+
 	emcmake cmake \
 		-H. \
+		-G "Ninja" \
 		-DCMAKE_BUILD_TYPE=Release \
-		-B"$2" \
+		-B"${build_folder}" \
 		-DSDL_STATIC=TRUE \
 		-DFT_DISABLE_HARFBUZZ=ON \
 		-DFT_DISABLE_BZIP2=ON \
 		-DFT_DISABLE_BROTLI=ON \
 		-DFT_REQUIRE_ZLIB=TRUE \
-		-DCMAKE_C_FLAGS="$COMPILEFLAGS -DGLEW_STATIC" -DCMAKE_CXX_FLAGS="$COMPILEFLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$COMPILEFLAGS" -DCMAKE_C_FLAGS_RELEASE="$COMPILEFLAGS" \
-		-DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" -DCMAKE_SHARED_LINKER_FLAGS_RELEASE="$LINKFLAGS" \
-		-DSDL_PTHREADS=ON -DSDL_THREADS=ON \
+		-DCMAKE_C_FLAGS="${COMPILEFLAGS} -DGLEW_STATIC" \
+		-DCMAKE_C_FLAGS_RELEASE="${COMPILEFLAGS} -DGLEW_STATIC" \
+		-DCMAKE_CXX_FLAGS="${COMPILEFLAGS}" \
+		-DCMAKE_CXX_FLAGS_RELEASE="${COMPILEFLAGS}" \
+		-DCMAKE_SHARED_LINKER_FLAGS="${LINKFLAGS}" \
+		-DCMAKE_SHARED_LINKER_FLAGS_RELEASE="${LINKFLAGS}" \
+		-DSDL_PTHREADS=ON \
+		-DSDL_THREADS=ON \
 		-DCURL_USE_OPENSSL=ON \
+		-DPNG_STATIC=OFF \
 		-DOPUS_HARDENING=OFF \
 		-DOPUS_STACK_PROTECTOR=OFF \
-		-DOPENSSL_ROOT_DIR="$PWD"/../openssl/"$2" \
-		-DOPENSSL_CRYPTO_LIBRARY="$PWD"/../openssl/"$2"/libcrypto.a \
-		-DOPENSSL_SSL_LIBRARY="$PWD"/../openssl/"$2"/libssl.a \
-		-DOPENSSL_INCLUDE_DIR="${PWD}/../openssl/include;${PWD}/../openssl/${2}/include" \
-		-DZLIB_LIBRARY="${PWD}/../zlib/${2}/libz.a" -DZLIB_INCLUDE_DIR="${PWD}/../zlib;${PWD}/../zlib/${2}"
+		-DZLIB_BUILD_STATIC=OFF \
+		-DOPENSSL_ROOT_DIR="${openssl_path}/${build_folder}" \
+		-DOPENSSL_CRYPTO_LIBRARY="${openssl_path}/${build_folder}/libcrypto.a" \
+		-DOPENSSL_SSL_LIBRARY="${openssl_path}/${build_folder}/libssl.a" \
+		-DOPENSSL_INCLUDE_DIR="${openssl_path}/include;${openssl_path}/${build_folder}/include" \
+		-DZLIB_LIBRARY="${zlib_path}/${build_folder}/libz.a" \
+		-DZLIB_INCLUDE_DIR="${zlib_path};${zlib_path}/${build_folder}"
+
 	(
-		cd "$2" || exit 1
-		cmake --build .
+		cd "${build_folder}"
+		# We want word splitting
+		# shellcheck disable=SC2086
+		cmake --build . $BUILD_FLAGS
 	)
 }
 
-if [[ "${2}" == "android" ]]; then
-	compile_source_android "$1" build_android_arm armeabi-v7a &
-	compile_source_android "$1" build_android_arm64 arm64-v8a &
-	compile_source_android "$1" build_android_x86 x86 &
-	compile_source_android "$1" build_android_x86_64 x86_64 &
-elif [[ "${2}" == "webasm" ]]; then
-	sed -i "s/include(CheckSizes)//g" CMakeLists.txt
-	compile_source_webasm "$1" build_webasm_wasm wasm &
-fi
+function make_all_cmake() {
+	if [[ "${TARGET_PLATFORM}" == "android" ]]; then
+		make_cmake_android build_android_arm "${ANDROID_ARM_ABI}"
+		make_cmake_android build_android_arm64 "${ANDROID_ARM64_ABI}"
+		make_cmake_android build_android_x86 "${ANDROID_X86_ABI}"
+		make_cmake_android build_android_x86_64 "${ANDROID_X64_ABI}"
+	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+		sed -i "s/include(CheckSizes)//g" CMakeLists.txt
+		make_cmake_webasm build_webasm_wasm
+	else
+		print "ERROR: unsupported target platform: ${TARGET_PLATFORM}"
+		exit 1
+	fi
+}
 
-wait
+make_all_cmake
