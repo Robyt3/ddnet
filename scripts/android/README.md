@@ -118,6 +118,10 @@ How to build the `ddnet-libs` for Android
 	```shell
 	sudo apt install p7zip-full
 	```
+-	Install libtool for building opusfile:
+	```shell
+	sudo apt-get install libtool
+	```
 -	There is a script to automatically download and build all repositories,
 	this requires an active internet connection and can take around 30 minutes:
 	```shell
