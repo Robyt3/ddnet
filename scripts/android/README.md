@@ -4,7 +4,7 @@ Requirements for building for Android on Linux
 -	At least 10-15 GiB of free disk space.
 -	First follow the general instructions for setting up https://github.com/ddnet/ddnet for building on Linux.
 -	Note: Use a stable version of Rust. Using the nightly version results in linking errors.
--	Install the Android NDK (version 26) in the same location
+-	Install the Android NDK (version 28) in the same location
 	where Android Studio would unpack it (`~/Android/Sdk/ndk/`):
 	```shell
 	mkdir ~/Android
@@ -13,21 +13,21 @@ Requirements for building for Android on Linux
 	cd Sdk
 	mkdir ndk
 	cd ndk
-	wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
-	unzip android-ndk-r26d-linux.zip
-	unlink android-ndk-r26d-linux.zip
+	wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
+	unzip android-ndk-r28-linux.zip
+	unlink android-ndk-r28-linux.zip
 	```
--	Install the Android SDK build tools (version 30.0.3) in the same location
+-	Install the Android SDK build tools (version 35.0.1) in the same location
 	where Android Studio would unpack them (`~/Android/Sdk/build-tools/`):
 	```shell
 	# Assuming you already created the Android/Sdk folders in the previous step
 	cd ~/Android/Sdk
 	mkdir build-tools
 	cd build-tools
-	wget https://dl.google.com/android/repository/build-tools_r30.0.3-linux.zip
-	unzip build-tools_r30.0.3-linux.zip
-	unlink build-tools_r30.0.3-linux.zip
-	mv android-11 30.0.3
+	wget https://dl.google.com/android/repository/build-tools_r35.0.1_linux.zip
+	unzip build-tools_r35.0.1_linux.zip
+	unlink build-tools_r35.0.1_linux.zip
+	mv android-15 35.0.1
 	```
 -	Install the Android command-line tools and accept the licenses using the SDK manager,
 	otherwise the Gradle build will fail if the licenses have not been accepted:
@@ -36,9 +36,9 @@ Requirements for building for Android on Linux
 	cd ~/Android/Sdk
 	mkdir cmdline-tools
 	cd cmdline-tools
-	wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-	unzip commandlinetools-linux-11076708_latest.zip
-	unlink commandlinetools-linux-11076708_latest.zip
+	wget https://dl.google.com/android/repository/commandlinetools-linux-12700392_latest.zip
+	unzip commandlinetools-linux-12700392_latest.zip
+	unlink commandlinetools-linux-12700392_latest.zip
 	mv cmdline-tools latest
 	yes | latest/bin/sdkmanager --licenses
 	```
@@ -118,6 +118,10 @@ How to build the `ddnet-libs` for Android
 	```shell
 	sudo apt install p7zip-full
 	```
+-	Install libtool for building opusfile:
+	```shell
+	sudo apt-get install libtool
+	```
 -	There is a script to automatically download and build all repositories,
 	this requires an active internet connection and can take around 30 minutes:
 	```shell
@@ -194,3 +198,9 @@ Common problems and solutions
 -	The Gradle build will fail with errors messages indicating an unsupported class file version if a different version of the JDK is used than specified in `build.gradle`.
 	When incrementing the supported JDK version, the Gradle version also has to be incremented according to https://docs.gradle.org/current/userguide/compatibility.html.
 	If you have multiple JDKs installed, you can set the JDK version for Gradle using the property `org.gradle.java.home` in the `gradle.properties` file in your Gradle home directory.
+
+Maintainers' notes
+==================
+
+-	To update the download links for the Android SDK refer to https://dl.google.com/android/repository/repository2-3.xml which lists all available files.
+-	To update Gradle and the Android Gradle Plugin refer to https://developer.android.com/build/releases/gradle-plugin#updating-gradle which list the compatible versions. To update the Gradle Wrapper a working build folder is required. Update the Gradle version and SHA256 in the file `gradle/wrapper/gradle-wrapper.properties` in the build folder. Next run `./gradlew wrapper` *twice* in the build folder. Lastly, copy the files `gradlew`, `gradlew.bat` and the folder `gradle` from the build folder to the folder `scripts/android/files` in the project root and override the existing files. Running the wrapper directly in the `scripts/android/files` folder does not work.
