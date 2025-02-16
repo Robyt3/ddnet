@@ -266,22 +266,22 @@ jobs:
         cd Sdk
         mkdir ndk
         cd ndk
-        wget --quiet https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
-        unzip android-ndk-r26d-linux.zip
-        rm android-ndk-r26d-linux.zip
+        wget --quiet https://dl.google.com/android/repository/android-ndk-r28-linux.zip
+        unzip android-ndk-r28-linux.zip
+        rm android-ndk-r28-linux.zip
         cd ~/Android/Sdk
         mkdir build-tools
         cd build-tools
-        wget --quiet https://dl.google.com/android/repository/build-tools_r30.0.3-linux.zip
-        unzip build-tools_r30.0.3-linux.zip
-        rm build-tools_r30.0.3-linux.zip
-        mv android-11 30.0.3
+        wget --quiet https://dl.google.com/android/repository/build-tools_r35.0.1_linux.zip
+        unzip build-tools_r35.0.1_linux.zip
+        rm build-tools_r35.0.1_linux.zip
+        mv android-15 35.0.1
         cd ~/Android/Sdk
         mkdir cmdline-tools
         cd cmdline-tools
-        wget --quiet https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip commandlinetools-linux-11076708_latest.zip
-        rm commandlinetools-linux-11076708_latest.zip
+        wget --quiet https://dl.google.com/android/repository/commandlinetools-linux-12700392_latest.zip
+        unzip commandlinetools-linux-12700392_latest.zip
+        rm commandlinetools-linux-12700392_latest.zip
         mv cmdline-tools latest
         yes | latest/bin/sdkmanager --licenses
 
