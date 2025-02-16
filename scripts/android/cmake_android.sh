@@ -1,45 +1,13 @@
 #!/bin/bash
 set -e
 
-# Ensure that binaries from MSYS2 are preferred over Windows-native commands like find and sort which work differently.
-PATH="/usr/bin/:$PATH"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# shellcheck source=scripts/compile_libs/_build_common.sh
+source "${SCRIPT_DIR}/../compile_libs/_build_common.sh"
 
-# $ANDROID_HOME can be used-defined, else the default location is used. Important notes:
-# - The path must not contain spaces on Windows.
-# - $HOME must be used instead of ~ else cargo-ndk cannot find the folder.
-ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
-export ANDROID_HOME
-
-BUILD_FLAGS="${BUILD_FLAGS:--j$(nproc)}"
-export BUILD_FLAGS
-
-ANDROID_NDK_VERSION="$(cd "$ANDROID_HOME/ndk" && find . -maxdepth 1 | sort -n | tail -1)"
-ANDROID_NDK_VERSION="${ANDROID_NDK_VERSION:2}"
-# ANDROID_NDK_HOME must be exported for cargo-ndk
-export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION"
-
-# ANDROID_API_LEVEL must specify the _minimum_ supported SDK version, otherwise this will cause linking errors at launch
-ANDROID_API_LEVEL=24
 ANDROID_SUB_BUILD_DIR=build_arch
 
-COLOR_RED="\e[1;31m"
-COLOR_YELLOW="\e[1;33m"
-COLOR_CYAN="\e[1;36m"
-COLOR_RESET="\e[0m"
-
 SHOW_USAGE_INFO=0
-
-log_info() {
-	printf "${COLOR_CYAN}%s${COLOR_RESET}\n" "$1"
-}
-
-log_warn() {
-	printf "${COLOR_YELLOW}%s${COLOR_RESET}\n" "$1" 1>&2
-}
-
-log_error() {
-	printf "${COLOR_RED}%s${COLOR_RESET}\n" "$1" 1>&2
-}
 
 if [ -z ${1+x} ]; then
 	SHOW_USAGE_INFO=1
@@ -146,29 +114,29 @@ function build_for_type() {
 	cmake \
 		-H. \
 		-G "Ninja" \
-		-DPREFER_BUNDLED_LIBS=ON \
 		-DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-		-DANDROID_PLATFORM="android-${ANDROID_API_LEVEL}" \
+		-B"${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" \
+		-DANDROID_PLATFORM="android-${ANDROID_API}" \
 		-DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
 		-DANDROID_NDK="$ANDROID_NDK_HOME" \
 		-DANDROID_ABI="${2}" \
-		-DANDROID_ARM_NEON=TRUE \
-		-DANDROID_PACKAGE_NAME="${PACKAGE_NAME//./_}" \
+		-DANDROID_ARM_NEON=ON \
+		-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
 		-DCMAKE_ANDROID_NDK="$ANDROID_NDK_HOME" \
 		-DCMAKE_SYSTEM_NAME=Android \
-		-DCMAKE_SYSTEM_VERSION="$ANDROID_API_LEVEL" \
+		-DCMAKE_SYSTEM_VERSION="$ANDROID_API" \
 		-DCMAKE_ANDROID_ARCH_ABI="${2}" \
 		-DCARGO_NDK_TARGET="${3}" \
-		-DCARGO_NDK_API="$ANDROID_API_LEVEL" \
-		-B"${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" \
+		-DCARGO_NDK_API="$ANDROID_API" \
+		-DANDROID_PACKAGE_NAME="${PACKAGE_NAME//./_}" \
+		-DPREFER_BUNDLED_LIBS=ON \
 		-DSERVER=ON \
 		-DTOOLS=OFF \
-		-DDEV=TRUE \
-		-DCMAKE_CROSSCOMPILING=ON \
+		-DDEV=ON \
 		-DVULKAN=ON \
-		-DVIDEORECORDER=OFF
+		-DVIDEORECORDER=ON
 	(
-		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" || exit 1
+		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1"
 		# We want word splitting
 		# shellcheck disable=SC2086
 		cmake --build . --target game-client game-server $BUILD_FLAGS
@@ -199,7 +167,7 @@ fi
 
 log_info "Copying project files..."
 
-cd "${BUILD_FOLDER}" || exit 1
+cd "${BUILD_FOLDER}"
 
 mkdir -p src/main
 mkdir -p gradle/wrapper
@@ -231,8 +199,8 @@ log_info "Copying libraries..."
 
 function copy_libs() {
 	mkdir -p "lib/$2"
-	cp "$ANDROID_SUB_BUILD_DIR/$1/libDDNet.so" "lib/$2" || exit 1
-	cp "$ANDROID_SUB_BUILD_DIR/$1/libDDNet-Server.so" "lib/$2" || exit 1
+	cp "$ANDROID_SUB_BUILD_DIR/$1/libDDNet.so" "lib/$2"
+	cp "$ANDROID_SUB_BUILD_DIR/$1/libDDNet-Server.so" "lib/$2"
 }
 
 if [[ "${ANDROID_BUILD}" == "arm" || "${ANDROID_BUILD}" == "all" ]]; then
@@ -257,16 +225,13 @@ if [[ "${ANDROID_BUILD}" == "all" ]]; then
 fi
 
 log_info "Copying data folder..."
+rm -R -f assets/asset_integrity_files/data
 mkdir -p assets/asset_integrity_files
 cp -R "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/data" ./assets/asset_integrity_files
 
-log_info "Downloading certificate..."
-curl -s -S --remote-name --time-cond cacert.pem https://curl.se/ca/cacert.pem
-cp ./cacert.pem ./assets/asset_integrity_files/data/cacert.pem || exit 1
-
 log_info "Creating integrity index file..."
 (
-	cd assets/asset_integrity_files || exit 1
+	cd assets/asset_integrity_files
 	tmpfile="$(mktemp /tmp/hash_strings.XXX)"
 	find data -iname "*" -type f -print0 | xargs -0 sha256sum | awk '{gsub(/^\*/, "", $2); print substr($0, index($0, $2)), $1}' > "$tmpfile"
 	full_hash="$(sha256sum "$tmpfile" | cut -d' ' -f 1)"
@@ -285,7 +250,7 @@ mkdir -p src/main/java
 cp -R ../scripts/android/files/java/org src/main/java/
 cp -R ../ddnet-libs/sdl/java/org src/main/java/
 
-# shellcheck disable=SC1091
+# shellcheck source=scripts/android/files/build.sh
 source ./build.sh "$GAME_NAME" "$PACKAGE_NAME" "$BUILD_TYPE"
 
 cd ..
