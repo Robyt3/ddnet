@@ -303,6 +303,178 @@ const CSkin *CSkins::LoadSkin(const char *pName, CImageInfo &Info)
 	return SkinInsertIt.first->second.get();
 }
 
+bool CSkins::LoadSkinStart(const char *pName, CImageInfo &Info, CImageInfo &InfoGrayscale, CSkin::SSkinMetrics &Metrics, ColorRGBA &BloodColor)
+{
+	if(!Graphics()->CheckImageDivisibility(pName, Info, g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridy, true))
+	{
+		log_error("skins", "Skin failed image divisibility: %s", pName);
+		return false;
+	}
+	if(!Graphics()->IsImageFormatRgba(pName, Info))
+	{
+		log_error("skins", "Skin format is not RGBA: %s", pName);
+		return false;
+	}
+	const size_t BodyWidth = g_pData->m_aSprites[SPRITE_TEE_BODY].m_W * (Info.m_Width / g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridx);
+	const size_t BodyHeight = g_pData->m_aSprites[SPRITE_TEE_BODY].m_H * (Info.m_Height / g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridy);
+	if(BodyWidth > Info.m_Width || BodyHeight > Info.m_Height)
+	{
+		log_error("skins", "Skin size unsupported (w=%" PRIzu ", h=%" PRIzu "): %s", Info.m_Width, Info.m_Height, pName);
+		return false;
+	}
+
+	int FeetGridPixelsWidth = (Info.m_Width / g_pData->m_aSprites[SPRITE_TEE_FOOT].m_pSet->m_Gridx);
+	int FeetGridPixelsHeight = (Info.m_Height / g_pData->m_aSprites[SPRITE_TEE_FOOT].m_pSet->m_Gridy);
+	int FeetWidth = g_pData->m_aSprites[SPRITE_TEE_FOOT].m_W * FeetGridPixelsWidth;
+	int FeetHeight = g_pData->m_aSprites[SPRITE_TEE_FOOT].m_H * FeetGridPixelsHeight;
+	int FeetOffsetX = g_pData->m_aSprites[SPRITE_TEE_FOOT].m_X * FeetGridPixelsWidth;
+	int FeetOffsetY = g_pData->m_aSprites[SPRITE_TEE_FOOT].m_Y * FeetGridPixelsHeight;
+
+	int FeetOutlineGridPixelsWidth = (Info.m_Width / g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE].m_pSet->m_Gridx);
+	int FeetOutlineGridPixelsHeight = (Info.m_Height / g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE].m_pSet->m_Gridy);
+	int FeetOutlineWidth = g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE].m_W * FeetOutlineGridPixelsWidth;
+	int FeetOutlineHeight = g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE].m_H * FeetOutlineGridPixelsHeight;
+	int FeetOutlineOffsetX = g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE].m_X * FeetOutlineGridPixelsWidth;
+	int FeetOutlineOffsetY = g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE].m_Y * FeetOutlineGridPixelsHeight;
+
+	int BodyOutlineGridPixelsWidth = (Info.m_Width / g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_pSet->m_Gridx);
+	int BodyOutlineGridPixelsHeight = (Info.m_Height / g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_pSet->m_Gridy);
+	int BodyOutlineWidth = g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_W * BodyOutlineGridPixelsWidth;
+	int BodyOutlineHeight = g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_H * BodyOutlineGridPixelsHeight;
+	int BodyOutlineOffsetX = g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_X * BodyOutlineGridPixelsWidth;
+	int BodyOutlineOffsetY = g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_Y * BodyOutlineGridPixelsHeight;
+
+	const size_t PixelStep = Info.PixelSize();
+	const size_t Pitch = Info.m_Width * PixelStep;
+
+	// dig out blood color
+	{
+		int64_t aColors[3] = {0};
+		for(size_t y = 0; y < BodyHeight; y++)
+		{
+			for(size_t x = 0; x < BodyWidth; x++)
+			{
+				const size_t Offset = y * Pitch + x * PixelStep;
+				if(Info.m_pData[Offset + 3] > 128)
+				{
+					for(size_t c = 0; c < 3; c++)
+					{
+						aColors[c] += Info.m_pData[Offset + c];
+					}
+				}
+			}
+		}
+		BloodColor = ColorRGBA(normalize(vec3(aColors[0], aColors[1], aColors[2])));
+	}
+
+	CheckMetrics(Metrics.m_Body, Info.m_pData, Pitch, 0, 0, BodyWidth, BodyHeight);
+	CheckMetrics(Metrics.m_Body, Info.m_pData, Pitch, BodyOutlineOffsetX, BodyOutlineOffsetY, BodyOutlineWidth, BodyOutlineHeight);
+	CheckMetrics(Metrics.m_Feet, Info.m_pData, Pitch, FeetOffsetX, FeetOffsetY, FeetWidth, FeetHeight);
+	CheckMetrics(Metrics.m_Feet, Info.m_pData, Pitch, FeetOutlineOffsetX, FeetOutlineOffsetY, FeetOutlineWidth, FeetOutlineHeight);
+
+	InfoGrayscale = Info.DeepCopy();
+	ConvertToGrayscale(InfoGrayscale);
+
+	int aFreq[256] = {0};
+	int OrgWeight = 0;
+	int NewWeight = 192;
+
+	// find most common frequency
+	for(size_t y = 0; y < BodyHeight; y++)
+	{
+		for(size_t x = 0; x < BodyWidth; x++)
+		{
+			const size_t Offset = y * Pitch + x * PixelStep;
+			if(InfoGrayscale.m_pData[Offset + 3] > 128)
+			{
+				aFreq[InfoGrayscale.m_pData[Offset]]++;
+			}
+		}
+	}
+
+	for(int i = 1; i < 256; i++)
+	{
+		if(aFreq[OrgWeight] < aFreq[i])
+		{
+			OrgWeight = i;
+		}
+	}
+
+	// reorder
+	int InvOrgWeight = 255 - OrgWeight;
+	int InvNewWeight = 255 - NewWeight;
+	for(size_t y = 0; y < BodyHeight; y++)
+	{
+		for(size_t x = 0; x < BodyWidth; x++)
+		{
+			const size_t Offset = y * Pitch + x * PixelStep;
+			int v = InfoGrayscale.m_pData[Offset];
+			if(v <= OrgWeight && OrgWeight == 0)
+			{
+				v = 0;
+			}
+			else if(v <= OrgWeight)
+			{
+				v = (int)(((v / (float)OrgWeight) * NewWeight));
+			}
+			else if(InvOrgWeight == 0)
+			{
+				v = NewWeight;
+			}
+			else
+			{
+				v = (int)(((v - OrgWeight) / (float)InvOrgWeight) * InvNewWeight + NewWeight);
+			}
+			InfoGrayscale.m_pData[Offset] = v;
+			InfoGrayscale.m_pData[Offset + 1] = v;
+			InfoGrayscale.m_pData[Offset + 2] = v;
+		}
+	}
+	return true;
+}
+
+const CSkin *CSkins::LoadSkinFinish(const char *pName, CImageInfo &Info, CImageInfo &InfoGrayscale, CSkin::SSkinMetrics &Metrics, ColorRGBA &BloodColor)
+{
+	CSkin Skin{pName};
+
+	Skin.m_OriginalSkin.m_Body = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_BODY]);
+	Skin.m_OriginalSkin.m_BodyOutline = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE]);
+	Skin.m_OriginalSkin.m_Feet = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_FOOT]);
+	Skin.m_OriginalSkin.m_FeetOutline = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE]);
+	Skin.m_OriginalSkin.m_Hands = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_HAND]);
+	Skin.m_OriginalSkin.m_HandsOutline = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_HAND_OUTLINE]);
+	for(size_t i = 0; i < std::size(Skin.m_OriginalSkin.m_aEyes); ++i)
+	{
+		Skin.m_OriginalSkin.m_aEyes[i] = Graphics()->LoadSpriteTexture(Info, &g_pData->m_aSprites[SPRITE_TEE_EYE_NORMAL + i]);
+	}
+
+	Skin.m_ColorableSkin.m_Body = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_BODY]);
+	Skin.m_ColorableSkin.m_BodyOutline = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE]);
+	Skin.m_ColorableSkin.m_Feet = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_FOOT]);
+	Skin.m_ColorableSkin.m_FeetOutline = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_FOOT_OUTLINE]);
+	Skin.m_ColorableSkin.m_Hands = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_HAND]);
+	Skin.m_ColorableSkin.m_HandsOutline = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_HAND_OUTLINE]);
+	for(size_t i = 0; i < std::size(Skin.m_ColorableSkin.m_aEyes); ++i)
+	{
+		Skin.m_ColorableSkin.m_aEyes[i] = Graphics()->LoadSpriteTexture(InfoGrayscale, &g_pData->m_aSprites[SPRITE_TEE_EYE_NORMAL + i]);
+	}
+
+	Skin.m_Metrics = Metrics;
+	Skin.m_BloodColor = BloodColor;
+
+	if(g_Config.m_Debug)
+	{
+		log_trace("skins", "Loaded skin '%s'", Skin.GetName());
+	}
+
+	auto &&pSkin = std::make_unique<CSkin>(std::move(Skin));
+	const auto SkinInsertIt = m_Skins.insert({pSkin->GetName(), std::move(pSkin)});
+
+	m_LastRefreshTime = time_get_nanoseconds();
+
+	return SkinInsertIt.first->second.get();
+}
+
 void CSkins::OnInit()
 {
 	m_aEventSkinPrefix[0] = '\0';
@@ -336,9 +508,9 @@ void CSkins::OnRender()
 			continue;
 		}
 
-		if(pLoadingSkin->m_pDownloadJob->State() == IJob::STATE_DONE && pLoadingSkin->m_pDownloadJob->ImageInfo().m_pData)
+		if(pLoadingSkin->m_pDownloadJob->State() == IJob::STATE_DONE && pLoadingSkin->m_pDownloadJob->m_ImageInfo.m_pData)
 		{
-			LoadSkin(pLoadingSkin->Name(), pLoadingSkin->m_pDownloadJob->ImageInfo());
+			LoadSkinFinish(pLoadingSkin->Name(), pLoadingSkin->m_pDownloadJob->m_ImageInfo, pLoadingSkin->m_pDownloadJob->m_ImageInfoGrayscale, pLoadingSkin->m_pDownloadJob->m_SkinMetrics, pLoadingSkin->m_pDownloadJob->m_BloodColor);
 			GameClient()->OnSkinUpdate(pLoadingSkin->Name());
 			pLoadingSkin->m_pDownloadJob = nullptr;
 			if(time_get_nanoseconds() - StartTime >= 250us)
@@ -556,6 +728,7 @@ void CSkins::CSkinDownloadJob::Run()
 		if(m_pSkins->Storage()->ReadFile(aPathReal, IStorage::TYPE_SAVE, &pPngData, &PngSize))
 		{
 			m_pSkins->Graphics()->LoadPng(m_ImageInfo, (uint8_t *)pPngData, PngSize, aPathReal);
+			m_pSkins->LoadSkinStart(m_aName, m_ImageInfo, m_ImageInfoGrayscale, m_SkinMetrics, m_BloodColor);
 			free(pPngData);
 			pPngData = nullptr;
 		}
@@ -607,7 +780,9 @@ void CSkins::CSkinDownloadJob::Run()
 	pGet->Result(&pResult, &ResultSize);
 
 	m_ImageInfo.Free();
+	m_ImageInfoGrayscale.Free();
 	bool Success = m_pSkins->Graphics()->LoadPng(m_ImageInfo, pResult, ResultSize, aUrl);
+	m_pSkins->LoadSkinStart(m_aName, m_ImageInfo, m_ImageInfoGrayscale, m_SkinMetrics, m_BloodColor);
 	pGet->OnValidation(Success);
 	if(!Success)
 	{

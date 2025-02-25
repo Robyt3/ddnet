@@ -54,7 +54,11 @@ private:
 
 		bool Abort() override REQUIRES(!m_Lock);
 
-		CImageInfo &ImageInfo() { return m_ImageInfo; }
+		// TODO: add class for bundle of these variables
+		CImageInfo m_ImageInfo;
+		CImageInfo m_ImageInfoGrayscale;
+		CSkin::SSkinMetrics m_SkinMetrics;
+		ColorRGBA m_BloodColor;
 
 	protected:
 		void Run() override REQUIRES(!m_Lock);
@@ -64,7 +68,6 @@ private:
 		char m_aName[MAX_SKIN_LENGTH];
 		CLock m_Lock;
 		std::shared_ptr<CHttpRequest> m_pGetRequest;
-		CImageInfo m_ImageInfo;
 	};
 
 	class CLoadingSkin
@@ -98,6 +101,8 @@ private:
 
 	const CSkin *LoadSkin(const char *pName, const char *pPath, int DirType);
 	const CSkin *LoadSkin(const char *pName, CImageInfo &Info);
+	bool LoadSkinStart(const char *pName, CImageInfo &Info, CImageInfo &InfoGrayscale, CSkin::SSkinMetrics &Metrics, ColorRGBA &BloodColor);
+	const CSkin *LoadSkinFinish(const char *pName, CImageInfo &Info, CImageInfo &InfoGrayscale, CSkin::SSkinMetrics &Metrics, ColorRGBA &BloodColor);
 	const CSkin *FindImpl(const char *pName);
 	static int SkinScan(const char *pName, int IsDir, int DirType, void *pUser);
 };
