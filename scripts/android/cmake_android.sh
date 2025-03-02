@@ -134,7 +134,7 @@ function build_for_type() {
 		-DDEV=TRUE \
 		-DCMAKE_CROSSCOMPILING=ON \
 		-DVULKAN=ON \
-		-DVIDEORECORDER=OFF
+		-DVIDEORECORDER=ON
 	(
 		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" || exit 1
 		# We want word splitting
