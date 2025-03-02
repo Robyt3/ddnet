@@ -149,7 +149,7 @@ TEST(ChunkHeader, PackSeq64)
 	Header.m_Flags = NET_CHUNKFLAG_VITAL;
 	Header.m_Size = 0;
 	Header.m_Sequence = 64;
-	TestPackUnpack(Header, {0x40, 0x10, 0x40});
+	TestPackUnpack(Header, {0x40, 0x00, 0x40});
 }
 
 TEST(ChunkHeader, PackSeq126)
@@ -158,7 +158,7 @@ TEST(ChunkHeader, PackSeq126)
 	Header.m_Flags = NET_CHUNKFLAG_VITAL;
 	Header.m_Size = 0;
 	Header.m_Sequence = 126;
-	TestPackUnpack(Header, {0x40, 0x10, 0x7E});
+	TestPackUnpack(Header, {0x40, 0x00, 0x7E});
 }
 
 TEST(ChunkHeader, PackSeq255)
@@ -167,7 +167,7 @@ TEST(ChunkHeader, PackSeq255)
 	Header.m_Flags = NET_CHUNKFLAG_VITAL;
 	Header.m_Size = 0;
 	Header.m_Sequence = 255;
-	TestPackUnpack(Header, {0x40, 0x30, 0xFF});
+	TestPackUnpack(Header, {0x40, 0x00, 0xFF});
 }
 
 TEST(ChunkHeader, PackSeqMax)
@@ -176,7 +176,7 @@ TEST(ChunkHeader, PackSeqMax)
 	Header.m_Flags = NET_CHUNKFLAG_VITAL;
 	Header.m_Size = 0;
 	Header.m_Sequence = NET_MAX_SEQUENCE - 1;
-	TestPackUnpack(Header, {0x40, 0xF0, 0xFF});
+	TestPackUnpack(Header, {0x40, 0xC0, 0xFF});
 }
 
 TEST(ChunkHeader, PackSize255Seq511)
@@ -185,7 +185,7 @@ TEST(ChunkHeader, PackSize255Seq511)
 	Header.m_Flags = NET_CHUNKFLAG_VITAL;
 	Header.m_Size = 255;
 	Header.m_Sequence = 511;
-	TestPackUnpack(Header, {0x4F, 0x7F, 0xFF});
+	TestPackUnpack(Header, {0x4F, 0x4F, 0xFF});
 }
 
 TEST(ChunkHeader, PackAllBits)
@@ -198,5 +198,6 @@ TEST(ChunkHeader, PackAllBits)
 	CNetChunkHeader Unpacked = Header;
 	Unpacked.m_Size = 1023; // maximum unpacked
 
-	TestPackUnpack(Header, {0xFF, 0xFF, 0xFF}, Unpacked);
+	// Packing with Split=4 leaves 2 bits unused
+	TestPackUnpack(Header, {0xFF, 0xCF, 0xFF}, Unpacked);
 }

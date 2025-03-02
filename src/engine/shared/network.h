@@ -43,8 +43,19 @@ CURRENT:
 
 	chunk header: 2-3 bytes
 		unsigned char flags_size; // 2bit flags, 6 bit size
-		unsigned char size_seq; // 4bit size, 4bit seq
-		(unsigned char seq;) // 8bit seq, if vital flag is set
+			     FFZZZZZZ
+		unsigned char size_seq; // 4bit size, 2bit seq (if vital flag is set)
+			0.6: SSxxzzzz
+			0.7: SSzzzzzz
+		(unsigned char seq;) // 8bit seq (if vital flag is set)
+			     ssssssss
+
+			F = flags (NET_CHUNKFLAG_VITAL and NET_CHUNKFLAG_RESEND)
+			Z = size (upper bits)
+			z = size (lower bits)
+			S = sequence (upper bits)
+			s = sequence (lower bits)
+			x = should be zero otherwise it messes up the sequence for old servers/clients
 */
 
 enum
