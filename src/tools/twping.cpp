@@ -14,8 +14,7 @@ int main(int argc, const char **argv)
 	log_set_global_logger_default();
 
 	net_init();
-	NETADDR BindAddr;
-	mem_zero(&BindAddr, sizeof(BindAddr));
+	NETADDR BindAddr = NETADDR_ZEROED;
 	BindAddr.type = NETTYPE_ALL;
 
 	CNetClient NetClient;

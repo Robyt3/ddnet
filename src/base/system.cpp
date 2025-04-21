@@ -1391,7 +1391,7 @@ static int parse_uint16(unsigned short *out, const char **str)
 int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t host_buf_size)
 {
 	bool sixup = false;
-	mem_zero(addr, sizeof(*addr));
+	*addr = NETADDR_ZEROED;
 	const char *str = str_startswith(string, "tw-0.6+udp://");
 	if(!str && (str = str_startswith(string, "tw-0.7+udp://")))
 	{
@@ -1454,7 +1454,7 @@ bool net_addr_is_local(const NETADDR *addr)
 int net_addr_from_str(NETADDR *addr, const char *string)
 {
 	const char *str = string;
-	mem_zero(addr, sizeof(NETADDR));
+	*addr = NETADDR_ZEROED;
 
 	if(str[0] == '[')
 	{

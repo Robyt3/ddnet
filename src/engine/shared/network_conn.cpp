@@ -48,7 +48,7 @@ void CNetConnection::Reset(bool Rejoin)
 	m_LastSendTime = 0;
 	m_LastRecvTime = 0;
 
-	mem_zero(&m_aConnectAddrs, sizeof(m_aConnectAddrs));
+	std::fill(std::begin(m_aConnectAddrs), std::end(m_aConnectAddrs), NETADDR_ZEROED);
 	m_NumConnectAddrs = 0;
 	m_UnknownSeq = false;
 

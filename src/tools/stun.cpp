@@ -25,8 +25,7 @@ int main(int argc, const char **argv)
 	}
 
 	net_init();
-	NETADDR BindAddr;
-	mem_zero(&BindAddr, sizeof(BindAddr));
+	NETADDR BindAddr = NETADDR_ZEROED;
 	BindAddr.type = NETTYPE_ALL;
 	NETSOCKET Socket = net_udp_create(BindAddr);
 	if(net_socket_type(Socket) == NETTYPE_INVALID)
