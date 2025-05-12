@@ -413,6 +413,10 @@ public:
 	bool MainLoopIteration();
 	void Run();
 	void Uninit();
+#if defined(CONF_PLATFORM_EMSCRIPTEN)
+	bool m_MainLoopCallbackInit = false;
+	static void MainLoopCallback(void *pUserData);
+#endif
 
 	bool InitNetworkClient(char *pError, size_t ErrorSize);
 	bool CtrlShiftKey(int Key, bool &Last);

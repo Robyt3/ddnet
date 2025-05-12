@@ -64,6 +64,8 @@
 
 #if defined(CONF_PLATFORM_ANDROID)
 #include <android/android_main.h>
+#elif defined(CONF_PLATFORM_EMSCRIPTEN)
+#include <emscripten.h>
 #endif
 
 #include "SDL.h"
@@ -3395,6 +3397,27 @@ void CClient::Uninit()
 	m_pTextRender->Shutdown();
 }
 
+#if defined(CONF_PLATFORM_EMSCRIPTEN)
+void CClient::MainLoopCallback(void *pUserData)
+{
+	CClient *pClient = static_cast<CClient *>(pUserData);
+	if(!pClient->m_MainLoopCallbackInit)
+	{
+		pClient->m_MainLoopCallbackInit = true;
+		if(!pClient->Init())
+		{
+			emscripten_cancel_main_loop();
+			return;
+		}
+	}
+	if(!pClient->MainLoopIteration())
+	{
+		pClient->Uninit();
+		emscripten_cancel_main_loop();
+	}
+}
+#endif
+
 bool CClient::InitNetworkClient(char *pError, size_t ErrorSize)
 {
 	NETADDR BindAddr;
@@ -4946,6 +4969,10 @@ int main(int argc, const char **argv)
 	SDL_SetHint("SDL_IOS_ORIENTATIONS", "LandscapeLeft LandscapeRight");
 #endif
 
+#if defined(CONF_PLATFORM_EMSCRIPTEN)
+	SDL_SetHint("SDL_EMSCRIPTEN_ASYNCIFY", "0");
+#endif
+
 	// init SDL
 	if(SDL_Init(0) < 0)
 	{
@@ -4959,6 +4986,9 @@ int main(int argc, const char **argv)
 
 	// run the client
 	log_trace("client", "initialization finished after %.2fms, starting...", (time_get() - MainStart) * 1000.0f / (float)time_freq());
+#if defined(CONF_PLATFORM_EMSCRIPTEN)
+	emscripten_set_main_loop_arg(CClient::MainLoopCallback, pClient, 0, 1);
+#else
 	if(pClient->Init())
 	{
 		pClient->Run();
@@ -4993,6 +5023,7 @@ int main(int argc, const char **argv)
 	}
 
 	PerformFinalCleanup();
+#endif // !CONF_PLATFORM_EMSCRIPTEN
 
 	return 0;
 }
