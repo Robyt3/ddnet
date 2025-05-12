@@ -3011,7 +3011,7 @@ void CClient::InitInterfaces()
 	m_GhostLoader.Init();
 }
 
-void CClient::Run()
+bool CClient::Init()
 {
 	m_LocalStartTime = m_GlobalStartTime = time_get();
 #if defined(CONF_VIDEORECORDER)
@@ -3040,7 +3040,7 @@ void CClient::Run()
 	{
 		log_error("client", "%s", aNetworkError);
 		ShowMessageBox("Network Error", aNetworkError);
-		return;
+		return false;
 	}
 #endif
 
@@ -3049,7 +3049,7 @@ void CClient::Run()
 		const char *pErrorMessage = "Failed to initialize the HTTP client.";
 		log_error("client", "%s", pErrorMessage);
 		ShowMessageBox("HTTP Error", pErrorMessage);
-		return;
+		return false;
 	}
 
 	// init graphics
@@ -3060,7 +3060,7 @@ void CClient::Run()
 	{
 		log_error("client", "couldn't init graphics");
 		ShowMessageBox("Graphics Error", "The graphics could not be initialized.");
-		return;
+		return false;
 	}
 
 	// make sure the first frame just clears everything to prevent undesired colors when waiting for io
@@ -3138,180 +3138,186 @@ void CClient::Run()
 		AddWarning(Warning);
 	}
 
-	bool LastD = false;
-	bool LastE = false;
-	bool LastG = false;
+	m_MainLoopLastRenderTime = time_get();
+	return true;
+}
 
+bool CClient::MainLoopIteration()
+{
+	set_new_tick();
+
+	// handle pending connects
+	if(m_aCmdConnect[0])
+	{
+		str_copy(g_Config.m_UiServerAddress, m_aCmdConnect);
+		Connect(m_aCmdConnect);
+		m_aCmdConnect[0] = 0;
+	}
+
+	// handle pending demo play
+	if(m_aCmdPlayDemo[0])
+	{
+		const char *pError = DemoPlayer_Play(m_aCmdPlayDemo, IStorage::TYPE_ALL_OR_ABSOLUTE);
+		if(pError)
+			log_error("demo_player", "playing passed demo file '%s' failed: %s", m_aCmdPlayDemo, pError);
+		m_aCmdPlayDemo[0] = 0;
+	}
+
+	// handle pending map edits
+	if(m_aCmdEditMap[0])
+	{
+		int Result = m_pEditor->HandleMapDrop(m_aCmdEditMap, IStorage::TYPE_ALL_OR_ABSOLUTE);
+		if(Result)
+			g_Config.m_ClEditor = true;
+		else
+			log_error("editor", "editing passed map file '%s' failed", m_aCmdEditMap);
+		m_aCmdEditMap[0] = 0;
+	}
+
+	// progress on dummy connect when the connection is online
+	if(m_DummySendConnInfo && m_aNetClient[CONN_DUMMY].State() == NETSTATE_ONLINE)
+	{
+		m_DummySendConnInfo = false;
+		SendInfo(CONN_DUMMY);
+		m_aNetClient[CONN_DUMMY].Update();
+		SendReady(CONN_DUMMY);
+		GameClient()->SendDummyInfo(true);
+		SendEnterGame(CONN_DUMMY);
+	}
+
+	// update input
+	if(Input()->Update())
+	{
+		if(State() == IClient::STATE_QUITTING)
+			return false;
+		else
+			SetState(IClient::STATE_QUITTING); // SDL_QUIT
+	}
+
+	char aFile[IO_MAX_PATH_LENGTH];
+	if(Input()->GetDropFile(aFile, sizeof(aFile)))
+	{
+		if(str_startswith(aFile, CONNECTLINK_NO_SLASH))
+			HandleConnectLink(aFile);
+		else if(str_endswith(aFile, ".demo"))
+			HandleDemoPath(aFile);
+		else if(str_endswith(aFile, ".map"))
+			HandleMapPath(aFile);
+	}
+
+#if defined(CONF_AUTOUPDATE)
+	Updater()->Update();
+#endif
+
+	// update sound
+	Sound()->Update();
+
+	if(CtrlShiftKey(KEY_D, m_MainLoopLastD))
+		g_Config.m_Debug ^= 1;
+
+	if(CtrlShiftKey(KEY_G, m_MainLoopLastG))
+		g_Config.m_DbgGraphs ^= 1;
+
+	if(CtrlShiftKey(KEY_E, m_MainLoopLastE))
+	{
+		if(g_Config.m_ClEditor)
+			m_pEditor->OnClose();
+		g_Config.m_ClEditor = g_Config.m_ClEditor ^ 1;
+	}
+
+	// render
+	if(g_Config.m_ClEditor)
+	{
+		if(!m_EditorActive)
+		{
+			Input()->MouseModeRelative();
+			GameClient()->OnActivateEditor();
+			m_pEditor->OnActivate();
+			m_EditorActive = true;
+		}
+	}
+	else if(m_EditorActive)
+	{
+		m_EditorActive = false;
+	}
+
+	Update();
+	int64_t Now = time_get();
+
+	bool IsRenderActive = (g_Config.m_GfxBackgroundRender || m_pGraphics->WindowOpen());
+
+	bool AsyncRenderOld = g_Config.m_GfxAsyncRenderOld;
+
+	int GfxRefreshRate = g_Config.m_GfxRefreshRate;
+
+#if defined(CONF_VIDEORECORDER)
+	// keep rendering synced
+	if(IVideo::Current())
+	{
+		AsyncRenderOld = false;
+		GfxRefreshRate = 0;
+	}
+#endif
+
+	if(IsRenderActive &&
+		(!AsyncRenderOld || m_pGraphics->IsIdle()) &&
+		(!GfxRefreshRate || (time_freq() / (int64_t)g_Config.m_GfxRefreshRate) <= Now - m_MainLoopLastRenderTime))
+	{
+		// update frametime
+		m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
+		m_FpsGraph.Add(1.0f / m_RenderFrameTime);
+
+		if(m_BenchmarkFile)
+		{
+			char aBuf[64];
+			str_format(aBuf, sizeof(aBuf), "Frametime %d us\n", (int)(m_RenderFrameTime * 1000000));
+			io_write(m_BenchmarkFile, aBuf, str_length(aBuf));
+			if(time_get() > m_BenchmarkStopTime)
+			{
+				io_close(m_BenchmarkFile);
+				m_BenchmarkFile = nullptr;
+				Quit();
+			}
+		}
+
+		m_FrameTimeAverage = m_FrameTimeAverage * 0.9f + m_RenderFrameTime * 0.1f;
+
+		// keep the overflow time - it's used to make sure the gfx refreshrate is reached
+		int64_t AdditionalTime = g_Config.m_GfxRefreshRate ? ((Now - m_MainLoopLastRenderTime) - (time_freq() / (int64_t)g_Config.m_GfxRefreshRate)) : 0;
+		// if the value is over the frametime of a 60 fps frame, reset the additional time (drop the frames, that are lost already)
+		if(AdditionalTime > (time_freq() / 60))
+			AdditionalTime = (time_freq() / 60);
+		m_MainLoopLastRenderTime = Now - AdditionalTime;
+		m_LastRenderTime = Now;
+
+		Render();
+		m_pGraphics->Swap();
+	}
+	else if(!IsRenderActive)
+	{
+		// if the client does not render, it should reset its render time to a time where it would render the first frame, when it wakes up again
+		m_MainLoopLastRenderTime = g_Config.m_GfxRefreshRate ? (Now - (time_freq() / (int64_t)g_Config.m_GfxRefreshRate)) : Now;
+	}
+
+	AutoScreenshot_Cleanup();
+	AutoStatScreenshot_Cleanup();
+	AutoCSV_Cleanup();
+
+	m_Fifo.Update();
+
+	return State() != IClient::STATE_QUITTING && State() != IClient::STATE_RESTARTING;
+}
+
+void CClient::Run()
+{
 	auto LastTime = time_get_nanoseconds();
-	int64_t LastRenderTime = time_get();
 
 	while(true)
 	{
-		set_new_tick();
-
-		// handle pending connects
-		if(m_aCmdConnect[0])
+		if(!MainLoopIteration())
 		{
-			str_copy(g_Config.m_UiServerAddress, m_aCmdConnect);
-			Connect(m_aCmdConnect);
-			m_aCmdConnect[0] = 0;
-		}
-
-		// handle pending demo play
-		if(m_aCmdPlayDemo[0])
-		{
-			const char *pError = DemoPlayer_Play(m_aCmdPlayDemo, IStorage::TYPE_ALL_OR_ABSOLUTE);
-			if(pError)
-				log_error("demo_player", "playing passed demo file '%s' failed: %s", m_aCmdPlayDemo, pError);
-			m_aCmdPlayDemo[0] = 0;
-		}
-
-		// handle pending map edits
-		if(m_aCmdEditMap[0])
-		{
-			int Result = m_pEditor->HandleMapDrop(m_aCmdEditMap, IStorage::TYPE_ALL_OR_ABSOLUTE);
-			if(Result)
-				g_Config.m_ClEditor = true;
-			else
-				log_error("editor", "editing passed map file '%s' failed", m_aCmdEditMap);
-			m_aCmdEditMap[0] = 0;
-		}
-
-		// progress on dummy connect when the connection is online
-		if(m_DummySendConnInfo && m_aNetClient[CONN_DUMMY].State() == NETSTATE_ONLINE)
-		{
-			m_DummySendConnInfo = false;
-			SendInfo(CONN_DUMMY);
-			m_aNetClient[CONN_DUMMY].Update();
-			SendReady(CONN_DUMMY);
-			GameClient()->SendDummyInfo(true);
-			SendEnterGame(CONN_DUMMY);
-		}
-
-		// update input
-		if(Input()->Update())
-		{
-			if(State() == IClient::STATE_QUITTING)
-				break;
-			else
-				SetState(IClient::STATE_QUITTING); // SDL_QUIT
-		}
-
-		char aFile[IO_MAX_PATH_LENGTH];
-		if(Input()->GetDropFile(aFile, sizeof(aFile)))
-		{
-			if(str_startswith(aFile, CONNECTLINK_NO_SLASH))
-				HandleConnectLink(aFile);
-			else if(str_endswith(aFile, ".demo"))
-				HandleDemoPath(aFile);
-			else if(str_endswith(aFile, ".map"))
-				HandleMapPath(aFile);
-		}
-
-#if defined(CONF_AUTOUPDATE)
-		Updater()->Update();
-#endif
-
-		// update sound
-		Sound()->Update();
-
-		if(CtrlShiftKey(KEY_D, LastD))
-			g_Config.m_Debug ^= 1;
-
-		if(CtrlShiftKey(KEY_G, LastG))
-			g_Config.m_DbgGraphs ^= 1;
-
-		if(CtrlShiftKey(KEY_E, LastE))
-		{
-			if(g_Config.m_ClEditor)
-				m_pEditor->OnClose();
-			g_Config.m_ClEditor = g_Config.m_ClEditor ^ 1;
-		}
-
-		// render
-		{
-			if(g_Config.m_ClEditor)
-			{
-				if(!m_EditorActive)
-				{
-					Input()->MouseModeRelative();
-					GameClient()->OnActivateEditor();
-					m_pEditor->OnActivate();
-					m_EditorActive = true;
-				}
-			}
-			else if(m_EditorActive)
-			{
-				m_EditorActive = false;
-			}
-
-			Update();
-			int64_t Now = time_get();
-
-			bool IsRenderActive = (g_Config.m_GfxBackgroundRender || m_pGraphics->WindowOpen());
-
-			bool AsyncRenderOld = g_Config.m_GfxAsyncRenderOld;
-
-			int GfxRefreshRate = g_Config.m_GfxRefreshRate;
-
-#if defined(CONF_VIDEORECORDER)
-			// keep rendering synced
-			if(IVideo::Current())
-			{
-				AsyncRenderOld = false;
-				GfxRefreshRate = 0;
-			}
-#endif
-
-			if(IsRenderActive &&
-				(!AsyncRenderOld || m_pGraphics->IsIdle()) &&
-				(!GfxRefreshRate || (time_freq() / (int64_t)g_Config.m_GfxRefreshRate) <= Now - LastRenderTime))
-			{
-				// update frametime
-				m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
-				m_FpsGraph.Add(1.0f / m_RenderFrameTime);
-
-				if(m_BenchmarkFile)
-				{
-					char aBuf[64];
-					str_format(aBuf, sizeof(aBuf), "Frametime %d us\n", (int)(m_RenderFrameTime * 1000000));
-					io_write(m_BenchmarkFile, aBuf, str_length(aBuf));
-					if(time_get() > m_BenchmarkStopTime)
-					{
-						io_close(m_BenchmarkFile);
-						m_BenchmarkFile = nullptr;
-						Quit();
-					}
-				}
-
-				m_FrameTimeAverage = m_FrameTimeAverage * 0.9f + m_RenderFrameTime * 0.1f;
-
-				// keep the overflow time - it's used to make sure the gfx refreshrate is reached
-				int64_t AdditionalTime = g_Config.m_GfxRefreshRate ? ((Now - LastRenderTime) - (time_freq() / (int64_t)g_Config.m_GfxRefreshRate)) : 0;
-				// if the value is over the frametime of a 60 fps frame, reset the additional time (drop the frames, that are lost already)
-				if(AdditionalTime > (time_freq() / 60))
-					AdditionalTime = (time_freq() / 60);
-				LastRenderTime = Now - AdditionalTime;
-				m_LastRenderTime = Now;
-
-				Render();
-				m_pGraphics->Swap();
-			}
-			else if(!IsRenderActive)
-			{
-				// if the client does not render, it should reset its render time to a time where it would render the first frame, when it wakes up again
-				LastRenderTime = g_Config.m_GfxRefreshRate ? (Now - (time_freq() / (int64_t)g_Config.m_GfxRefreshRate)) : Now;
-			}
-		}
-
-		AutoScreenshot_Cleanup();
-		AutoStatScreenshot_Cleanup();
-		AutoCSV_Cleanup();
-
-		m_Fifo.Update();
-
-		if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING)
 			break;
+		}
 
 		// beNice
 		auto Now = time_get_nanoseconds();
@@ -3359,7 +3365,10 @@ void CClient::Run()
 		m_LocalTime = (time_get() - m_LocalStartTime) / (float)time_freq();
 		m_GlobalTime = (time_get() - m_GlobalStartTime) / (float)time_freq();
 	}
+}
 
+void CClient::Uninit()
+{
 	GameClient()->RenderShutdownMessage();
 	Disconnect();
 
@@ -4950,7 +4959,11 @@ int main(int argc, const char **argv)
 
 	// run the client
 	log_trace("client", "initialization finished after %.2fms, starting...", (time_get() - MainStart) * 1000.0f / (float)time_freq());
-	pClient->Run();
+	if(pClient->Init())
+	{
+		pClient->Run();
+		pClient->Uninit();
+	}
 
 	const bool Restarting = pClient->State() == CClient::STATE_RESTARTING;
 #if !defined(CONF_PLATFORM_ANDROID)

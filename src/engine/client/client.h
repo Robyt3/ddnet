@@ -264,6 +264,12 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	std::shared_ptr<ILogger> m_pFileLogger = nullptr;
 	std::shared_ptr<ILogger> m_pStdoutLogger = nullptr;
 
+	// For MainLoopIteration function
+	bool m_MainLoopLastD = false;
+	bool m_MainLoopLastE = false;
+	bool m_MainLoopLastG = false;
+	int64_t m_MainLoopLastRenderTime;
+
 	// For RenderDebug function
 	NETSTATS m_NetstatsPrev = {};
 	NETSTATS m_NetstatsCurrent = {};
@@ -403,7 +409,10 @@ public:
 	void RegisterInterfaces();
 	void InitInterfaces();
 
+	bool Init();
+	bool MainLoopIteration();
 	void Run();
+	void Uninit();
 
 	bool InitNetworkClient(char *pError, size_t ErrorSize);
 	bool CtrlShiftKey(int Key, bool &Last);
