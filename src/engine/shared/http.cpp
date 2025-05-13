@@ -588,6 +588,9 @@ bool CHttp::Init(std::chrono::milliseconds ShutdownDelay)
 {
 	m_ShutdownDelay = ShutdownDelay;
 
+#if defined(CONF_PLATFORM_EMSCRIPTEN)
+	m_State = CHttp::ERROR;
+#else
 #if !defined(CONF_FAMILY_WINDOWS)
 	// As a multithreaded application we have to tell curl to not install signal
 	// handlers and instead ignore SIGPIPE from OpenSSL ourselves.
@@ -602,6 +605,7 @@ bool CHttp::Init(std::chrono::milliseconds ShutdownDelay)
 		return false;
 	}
 
+#endif
 	return true;
 }
 

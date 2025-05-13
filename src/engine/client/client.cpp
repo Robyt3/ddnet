@@ -2660,7 +2660,9 @@ void CClient::UpdateDemoIntraTimers()
 
 void CClient::Update()
 {
+#if !defined(CONF_PLATFORM_EMSCRIPTEN)
 	PumpNetwork();
+#endif
 
 	if(State() == IClient::STATE_DEMOPLAYBACK)
 	{
@@ -3389,9 +3391,10 @@ void CClient::Uninit()
 	GameClient()->OnShutdown();
 	delete m_pEditor;
 
-	// close sockets
+#if !defined(CONF_PLATFORM_EMSCRIPTEN)
 	for(unsigned int i = 0; i < std::size(m_aNetClient); i++)
 		m_aNetClient[i].Close();
+#endif
 
 	// shutdown text render while graphics are still available
 	m_pTextRender->Shutdown();

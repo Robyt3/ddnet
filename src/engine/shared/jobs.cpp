@@ -197,6 +197,7 @@ void CJobPool::Shutdown()
 	}
 
 	// wait for all worker threads to finish
+#if !defined(CONF_PLATFORM_EMSCRIPTEN)
 	for(void *pThread : m_vpThreads)
 	{
 		thread_wait(pThread);
@@ -204,6 +205,7 @@ void CJobPool::Shutdown()
 
 	m_vpThreads.clear();
 	sphore_destroy(&m_Semaphore);
+#endif
 }
 
 void CJobPool::Add(std::shared_ptr<IJob> pJob)

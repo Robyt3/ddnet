@@ -993,6 +993,7 @@ void CServerBrowser::Refresh(int Type, bool Force)
 
 	if(Type == IServerBrowser::TYPE_LAN)
 	{
+#if !defined(CONF_PLATFORM_EMSCRIPTEN)
 		unsigned char aBuffer[sizeof(SERVERBROWSE_GETINFO) + 1];
 		CNetChunk Packet;
 
@@ -1035,6 +1036,7 @@ void CServerBrowser::Refresh(int Type, bool Force)
 
 		if(g_Config.m_Debug)
 			m_pConsole->Print(IConsole::OUTPUT_LEVEL_DEBUG, "serverbrowser", "broadcasting for servers");
+#endif
 	}
 	else
 	{
