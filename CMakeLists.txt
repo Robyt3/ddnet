@@ -2481,6 +2481,8 @@ if(CLIENT)
     editor_ui.h
     enums.h
     explanations.cpp
+    file_browser.cpp
+    file_browser.h
     layer_selector.cpp
     layer_selector.h
     map_grid.cpp
