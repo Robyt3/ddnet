@@ -1,6 +1,7 @@
 #include "opengl_sl.h"
 
 #include <base/detect.h>
+#include <base/log.h>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
@@ -96,33 +97,38 @@ bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char 
 			ShaderCode[i] = vLines[i].c_str();
 		}
 
-		TWGLuint shader = glCreateShader(Type);
+		TWGLuint ShaderId = glCreateShader(Type);
 
-		glShaderSource(shader, vLines.size(), ShaderCode, NULL);
-		glCompileShader(shader);
+		glShaderSource(ShaderId, vLines.size(), ShaderCode, NULL);
+		glCompileShader(ShaderId);
 
 		delete[] ShaderCode;
 
 		int CompilationStatus;
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &CompilationStatus);
+		glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &CompilationStatus);
 
 		if(CompilationStatus == GL_FALSE)
 		{
-			char aBuf[3000];
-
-			TWGLint maxLength = 0;
-			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-			glGetShaderInfoLog(shader, maxLength, &maxLength, aBuf);
-
-			dbg_msg("glsl", "%s: %s", pFile, aBuf);
-			glDeleteShader(shader);
+			TWGLint LogLength = 0;
+			glGetShaderiv(ShaderId, GL_INFO_LOG_LENGTH, &LogLength);
+			if(LogLength > 0)
+			{
+				char *pLog = static_cast<char *>(malloc(LogLength));
+				glGetShaderInfoLog(ShaderId, LogLength, nullptr, pLog);
+				log_error("glsl", "Failed to compile shader file '%s'. The compiler returned: %s", pFile, pLog);
+				free(pLog);
+			}
+			else
+			{
+				log_error("glsl", "Failed to compile shader file '%s'. The compiler did not return an error.", pFile);
+			}
+			glDeleteShader(ShaderId);
 			return false;
 		}
 		m_Type = Type;
 		m_IsLoaded = true;
 
-		m_ShaderId = shader;
+		m_ShaderId = ShaderId;
 
 		return true;
 	}

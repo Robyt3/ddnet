@@ -1,6 +1,7 @@
 #include "backend_opengl3.h"
 
 #include <base/detect.h>
+#include <base/log.h>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
@@ -665,7 +666,7 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 
 			if(ConvertWidth == 0 || (ConvertWidth % 16) != 0 || ConvertHeight == 0 || (ConvertHeight % 16) != 0)
 			{
-				dbg_msg("gfx", "3D/2D array texture was resized");
+				log_warn("gfx", "3D/2D array texture was resized");
 				int NewWidth = maximum<int>(HighestBit(ConvertWidth), 16);
 				int NewHeight = maximum<int>(HighestBit(ConvertHeight), 16);
 				uint8_t *pNewTexData = ResizeImage(pTexData, ConvertWidth, ConvertHeight, NewWidth, NewHeight, GLFormatToPixelSize(GLFormat));
@@ -801,7 +802,8 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Render(const CCommandBuffer::SComm
 		glDrawElements(GL_TRIANGLES, pCommand->m_PrimCount * 6, GL_UNSIGNED_INT, 0);
 		break;
 	default:
-		dbg_msg("render", "unknown primtype %d\n", pCommand->m_PrimType);
+		dbg_assert(false, "pCommand->m_PrimType invalid: %d", pCommand->m_PrimType);
+		dbg_break();
 	};
 
 	m_LastStreamBuffer = (m_LastStreamBuffer + 1 >= MAX_STREAM_BUFFER_COUNT ? 0 : m_LastStreamBuffer + 1);
@@ -830,7 +832,8 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTex3D(const CCommandBuffer::
 		glDrawElements(GL_TRIANGLES, pCommand->m_PrimCount * 6, GL_UNSIGNED_INT, 0);
 		break;
 	default:
-		dbg_msg("render", "unknown primtype %d\n", pCommand->m_PrimType);
+		dbg_assert(false, "pCommand->m_PrimType invalid: %d", pCommand->m_PrimType);
+		dbg_break();
 	};
 }
 

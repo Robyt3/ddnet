@@ -1,8 +1,9 @@
 #include "opengl_sl_program.h"
 #include "opengl_sl.h"
-#include <base/system.h>
 
 #include <base/detect.h>
+#include <base/log.h>
+#include <base/system.h>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
@@ -56,12 +57,19 @@ void CGLSLProgram::LinkProgram()
 	m_IsLinked = LinkStatus == GL_TRUE;
 	if(!m_IsLinked)
 	{
-		char aInfoLog[1024];
-		char aFinalMessage[1536];
-		int LogLength;
-		glGetProgramInfoLog(m_ProgramId, 1024, &LogLength, aInfoLog);
-		str_format(aFinalMessage, sizeof(aFinalMessage), "Error! Shader program wasn't linked! The linker returned:\n\n%s", aInfoLog);
-		dbg_msg("glslprogram", "%s", aFinalMessage);
+		TWGLint LogLength = 0;
+		glGetProgramiv(m_ProgramId, GL_INFO_LOG_LENGTH, &LogLength);
+		if(LogLength > 0)
+		{
+			char *pLog = static_cast<char *>(malloc(LogLength));
+			glGetProgramInfoLog(m_ProgramId, LogLength, nullptr, pLog);
+			log_error("glslprogram", "%s", "Failed to link shader program '%d'. The linker returned: %s", m_ProgramId, pLog);
+			free(pLog);
+		}
+		else
+		{
+			log_error("glslprogram", "%s", "Failed to link shader program '%d'. The linked did not return an error.", m_ProgramId);
+		}
 	}
 
 	//detach all shaders attached to this program
