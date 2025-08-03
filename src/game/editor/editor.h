@@ -242,7 +242,6 @@ public:
 		m_AnimateSpeed = 1;
 		m_AnimateUpdatePopup = false;
 
-		m_ShowEnvelopePreview = SHOWENV_NONE;
 		m_SelectedQuadEnvelope = -1;
 
 		m_vSelectedEnvelopePoints = {};
@@ -512,13 +511,22 @@ public:
 	float m_aExtraEditorSplits[NUM_EXTRAEDITORS] = {250.0f, 250.0f, 250.0f};
 	float m_ToolBoxWidth = 100.0f;
 
-	enum EShowEnvelope
+	bool m_ShowEnvelopePreview = false;
+	enum class EEnvelopePreview
 	{
-		SHOWENV_NONE = 0,
-		SHOWENV_SELECTED,
-		SHOWENV_ALL
+		NONE,
+		SELECTED,
+		ALL,
 	};
-	EShowEnvelope m_ShowEnvelopePreview;
+	EEnvelopePreview m_ActiveEnvelopePreview = EEnvelopePreview::NONE;
+	enum class EQuadEnvelopePointOperation
+	{
+		NONE = 0,
+		MOVE,
+		ROTATE,
+	};
+	EQuadEnvelopePointOperation m_QuadEnvelopePointOperation = EQuadEnvelopePointOperation::NONE;
+
 	bool m_ShowPicker;
 
 	std::vector<int> m_vSelectedLayers;
@@ -678,8 +686,8 @@ public:
 	void PopupSelectAutoMapReferenceInvoke(int Current, float x, float y);
 	int PopupSelectAutoMapReferenceResult();
 
-	void DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CTextureHandle Texture = IGraphics::CTextureHandle());
-	void DoQuadEnvPoint(const CQuad *pQuad, int QIndex, int pIndex);
+	void DoQuadEnvelopes(const std::shared_ptr<CLayerQuads> &pLayer);
+	void DoQuadEnvPoint(const CQuad *pQuad, const std::shared_ptr<CEnvelope> &pEnvelope, int QuadIndex, int PointIndex);
 	void DoQuadPoint(int LayerIndex, const std::shared_ptr<CLayerQuads> &pLayer, CQuad *pQuad, int QuadIndex, int v);
 	void SetHotQuadPoint(const std::shared_ptr<CLayerQuads> &pLayer);
 
