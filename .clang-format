@@ -34,13 +34,36 @@ CommentPragmas: ''
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 8
 ContinuationIndentWidth: 8
+IncludeBlocks: Regroup
 IncludeCategories:
   - Regex:           '^"'
     Priority:        1
-  - Regex:           '^<(engine|game|mastersrv|versionsrv>'
+  - Regex:           '^<antibot/'
     Priority:        2
-  - Regex:           '.*'
+  - Regex:           '^<base/'
     Priority:        3
+  - Regex:           '^<engine/'
+    Priority:        4
+  - Regex:           '^<generated/'
+    Priority:        5
+  - Regex:           '^<game/'
+    Priority:        6
+  - Regex:           '^<android/'
+    Priority:        7
+  - Regex:           '^<steam/'
+    Priority:        8
+  - Regex:           '^<(jni.h|sqlite3.h|mysql.h|libwebsockets.h)'
+    Priority:        9
+  - Regex:           '^<SDL'
+    Priority:        10
+  - Regex:           '^<miniupnpc/'
+    Priority:        11
+  - Regex:           '^<vulkan/'
+    Priority:        12
+  - Regex:           '^<gtest/'
+    Priority:        13
+  - Regex:           '.*'
+    Priority:        14
 IncludeIsMainRegex: '$'
 IndentWidth: 8
 KeepEmptyLinesAtTheStartOfBlocks: false

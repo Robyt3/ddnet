@@ -1,13 +1,16 @@
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
 #include <base/detect.h>
+
 #include <engine/server/databases/connection.h>
 #include <engine/server/databases/connection_pool.h>
 #include <engine/shared/config.h>
+
 #include <game/server/scoreworker.h>
 
 #include <sqlite3.h>
+
+#include <gtest/gtest.h>
+
+#include <gmock/gmock.h>
 
 #if defined(CONF_TEST_MYSQL)
 int DummyMysqlInit = (MysqlInit(), 1);
