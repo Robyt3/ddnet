@@ -51,16 +51,29 @@ jobs:
         cd clang-sanitizer
         export CC=clang
         export CXX=clang++
-        export CXXFLAGS="-fsanitize=address,undefined -fsanitize-recover=address,undefined -fno-omit-frame-pointer"
-        export CFLAGS="-fsanitize=address,undefined -fsanitize-recover=address,undefined -fno-omit-frame-pointer"
-        cmake -DCMAKE_BUILD_TYPE=Debug -DHEADLESS_CLIENT=ON -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON ..
-        make -j"$(nproc)"
+        # TODO: Should add -fno-sanitize-merge but it's not supported yet?
+        #       Maybe cleaner to add a CLANG_SANITIZER cmake config option to properly set flags that are supported.
+        SAN_FLAGS="-fsanitize=address,undefined,leak -fsanitize-recover=all -fno-omit-frame-pointer -fno-common"
+        export CXXFLAGS="$SAN_FLAGS"
+        export CFLAGS="$SAN_FLAGS"
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHEADLESS_CLIENT=ON -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON ..
+        cmake --build . --config Debug --target everything
 
     - name: Run server and headless client with ASan and UBSan
       run: |
         cd clang-sanitizer
-        export UBSAN_OPTIONS=suppressions=../ubsan.supp:log_path=SAN:print_stacktrace=1:halt_on_errors=0
-        export ASAN_OPTIONS=log_path=SAN:print_stacktrace=1:check_initialization_order=1:detect_leaks=1:halt_on_errors=0
+        export UBSAN_OPTIONS=suppressions=../ubsan.supp:\
+          log_path=SAN:\
+          print_stacktrace=1:\
+          halt_on_errors=0
+        export ASAN_OPTIONS=log_path=SAN:\
+          print_stacktrace=1:\
+          strict_string_checks=1:\
+          detect_stack_use_after_return=1:\
+          check_initialization_order=1:\
+          strict_init_order=1:\
+          detect_leaks=1:\
+          halt_on_errors=0
         export LSAN_OPTIONS=suppressions=../lsan.supp
         ./DDNet "cl_download_skins 0;quit" || true
         ./DDNet-Server shutdown || true
