@@ -121,82 +121,80 @@ function copy_libs_for_arches() {
 }
 
 function _copy_boringssl() {
-	mkdir -p ddnet-libs/boringssl/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/boringssl/"$1"/libcrypto.a ddnet-libs/boringssl/"$TARGET_PLATFORM"/"$2"/libcrypto.a
-	cp compile_libs/boringssl/"$1"/libssl.a ddnet-libs/boringssl/"$TARGET_PLATFORM"/"$2"/libssl.a
+	local target_libs_folder="ddnet-libs/boringssl/$TARGET_PLATFORM/$2"
+	local target_include_folder="ddnet-libs/boringssl/include/$TARGET_PLATFORM"
+	mkdir -p "$target_libs_folder"
+	mkdir -p "$target_include_folder"
+	cp compile_libs/boringssl/"$1"/libcrypto.a "$target_libs_folder"/libcrypto.a
+	cp compile_libs/boringssl/"$1"/libssl.a "$target_libs_folder"/libssl.a
+	cp -R compile_libs/boringssl/include/openssl "$target_include_folder"
 }
 copy_libs_for_arches _copy_boringssl
-# TODO: should copy includes to platform specific folders
-mkdir -p ddnet-libs/boringssl/include
-cp -R compile_libs/boringssl/include/openssl ddnet-libs/boringssl/include/
 
 if [[ "$TARGET_PLATFORM" == "webasm" ]]; then
 	function _copy_zlib() {
-		# copy headers
-		(
-			# TODO: should use cp -R like above
-			cd compile_libs/zlib
-			find . -maxdepth 1 -iname '*.h' -print0 | while IFS= read -r -d $'\0' file; do
-				mkdir -p ../../ddnet-libs/zlib/include/"$(dirname "$file")"
-				cp "$file" ../../ddnet-libs/zlib/include/"$(dirname "$file")"
-			done
-
-			cd "$1"
-			find . -maxdepth 1 -iname '*.h' -print0 | while IFS= read -r -d $'\0' file; do
-				mkdir -p ../../../ddnet-libs/zlib/include/"$TARGET_PLATFORM"/"$(dirname "$file")"
-				cp "$file" ../../../ddnet-libs/zlib/include/"$TARGET_PLATFORM"/"$(dirname "$file")"
-			done
-		)
-
-		mkdir -p ddnet-libs/zlib/"$TARGET_PLATFORM"/"$2"
-		cp compile_libs/zlib/"$1"/libz.a ddnet-libs/zlib/"$TARGET_PLATFORM"/"$2"/libz.a
+		local target_libs_folder="ddnet-libs/zlib/$TARGET_PLATFORM/$2"
+		local target_include_folder="ddnet-libs/zlib/include/$TARGET_PLATFORM"
+		mkdir -p "$target_libs_folder"
+		mkdir -p "$target_include_folder"
+		cp compile_libs/zlib/"$1"/libz.a "$target_libs_folder"/libz.a
+		cp -R compile_libs/zlib/*.h "$target_include_folder"
+		cp -R compile_libs/zlib/"$1"/*.h "$target_include_folder"
 	}
 	copy_libs_for_arches _copy_zlib
 fi
 
 function _copy_png() {
-	mkdir -p ddnet-libs/png/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/png/"$1"/libpng16.a ddnet-libs/png/"$TARGET_PLATFORM"/"$2"/libpng16.a
+	local target_libs_folder="ddnet-libs/png/$TARGET_PLATFORM/$2"
+	mkdir -p "$target_libs_folder"
+	cp compile_libs/png/"$1"/libpng16.a "$target_libs_folder"/libpng16.a
 }
 copy_libs_for_arches _copy_png
 
 function _copy_curl() {
-	mkdir -p ddnet-libs/curl/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/curl/"$1"/lib/libcurl.a ddnet-libs/curl/"$TARGET_PLATFORM"/"$2"/libcurl.a
+	local target_libs_folder="ddnet-libs/curl/$TARGET_PLATFORM/$2"
+	mkdir -p "$target_libs_folder"
+	cp compile_libs/curl/"$1"/lib/libcurl.a "$target_libs_folder"/libcurl.a
 }
 copy_libs_for_arches _copy_curl
 
 function _copy_freetype() {
-	mkdir -p ddnet-libs/freetype/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/freetype/"$1"/libfreetype.a ddnet-libs/freetype/"$TARGET_PLATFORM"/"$2"/libfreetype.a
+	local target_libs_folder="ddnet-libs/freetype/$TARGET_PLATFORM/$2"
+	mkdir -p "$target_libs_folder"
+	cp compile_libs/freetype/"$1"/libfreetype.a "$target_libs_folder"/libfreetype.a
 }
 copy_libs_for_arches _copy_freetype
 
 function _copy_sdl() {
-	mkdir -p ddnet-libs/sdl/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/sdl/"$1"/libSDL2.a ddnet-libs/sdl/"$TARGET_PLATFORM"/"$2"/libSDL2.a
-	mkdir -p ddnet-libs/sdl/include/"$TARGET_PLATFORM"
-	cp -R compile_libs/sdl/include/* ddnet-libs/sdl/include/"$TARGET_PLATFORM"
+	local target_libs_folder="ddnet-libs/sdl/$TARGET_PLATFORM/$2"
+	local target_include_folder="ddnet-libs/sdl/include/$TARGET_PLATFORM"
+	mkdir -p "$target_libs_folder"
+	mkdir -p "$target_include_folder"
+	cp compile_libs/sdl/"$1"/libSDL2.a "$target_libs_folder"/libSDL2.a
+	cp -R compile_libs/sdl/include/* "$target_include_folder"
 }
 copy_libs_for_arches _copy_sdl
 
 # copy java code from SDL2
 if [[ "$TARGET_PLATFORM" == "android" ]]; then
-	rm -R -f ddnet-libs/sdl/java
-	mkdir -p ddnet-libs/sdl/java
-	cp -R compile_libs/sdl/android-project/app/src/main/java/org ddnet-libs/sdl/java/
+	local target_java_folder="ddnet-libs/sdl/java"
+	rm -R -f "$target_java_folder"
+	mkdir -p "$target_java_folder"
+	cp -R compile_libs/sdl/android-project/app/src/main/java/org "$target_java_folder"/
 fi
 
 function _copy_opus() {
-	mkdir -p ddnet-libs/opus/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/ogg/"$1"/libogg.a ddnet-libs/opus/"$TARGET_PLATFORM"/"$2"/libogg.a
-	cp compile_libs/opus/"$1"/libopus.a ddnet-libs/opus/"$TARGET_PLATFORM"/"$2"/libopus.a
-	cp compile_libs/opusfile/"$1"/libopusfile.a ddnet-libs/opus/"$TARGET_PLATFORM"/"$2"/libopusfile.a
+	local target_libs_folder="ddnet-libs/opus/$TARGET_PLATFORM/$2"
+	mkdir -p "$target_libs_folder"
+	cp compile_libs/ogg/"$1"/libogg.a "$target_libs_folder"/libogg.a
+	cp compile_libs/opus/"$1"/libopus.a "$target_libs_folder"/libopus.a
+	cp compile_libs/opusfile/"$1"/libopusfile.a "$target_libs_folder"/libopusfile.a
 }
 copy_libs_for_arches _copy_opus
 
 function _copy_sqlite3() {
-	mkdir -p ddnet-libs/sqlite3/"$TARGET_PLATFORM"/"$2"
-	cp compile_libs/sqlite3/"$1"/sqlite3.a ddnet-libs/sqlite3/"$TARGET_PLATFORM"/"$2"/libsqlite3.a
+	local target_libs_folder="ddnet-libs/sqlite3/$TARGET_PLATFORM/$2"
+	mkdir -p "$target_libs_folder"
+	cp compile_libs/sqlite3/"$1"/sqlite3.a "$target_libs_folder"/libsqlite3.a
 }
 copy_libs_for_arches _copy_sqlite3
