@@ -241,8 +241,8 @@ def run_lines_thread(name, file, output_filename, output_list, output_queue):
 			if output_file is None:
 				# pylint: disable=consider-using-with
 				output_file = open(output_filename, "w", buffering=1, encoding="utf-8") # line buffering
-			output_file.write(line)
 			line = line.rstrip("\r\n")
+			output_file.write(f"{line}\n")
 			output_list.append(line)
 			if output_queue is not None:
 				try:
