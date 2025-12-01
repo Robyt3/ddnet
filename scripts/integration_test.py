@@ -110,12 +110,16 @@ class TestRunner:
 			except Exception as e: # pylint: disable=broad-exception-caught
 				env.kill_all()
 				error = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+				error = env.append_valgrind_memcheck_errors(error)
+				error = env.append_stdout_stderr(error)
 				tmp_dir_cleanup = False
 			else:
 				env.kill_all()
 				error = None
 				if self.valgrind_memcheck:
-					error = env.check_valgrind_memcheck_errors()
+					error = env.append_valgrind_memcheck_errors(error)
+					if not error is None:
+						error = env.append_stdout_stderr(error)
 		finally:
 			if tmp_dir_cleanup:
 				shutil.rmtree(tmp_dir)
@@ -192,16 +196,16 @@ add_path {relpath(self.runner.data_dir, tmp_dir)}
 		self.num_mastersrvs = 0
 		self.processes = []
 		self.run_id = uuid4()
-		self.full_stderrs = []
+		self.full_stdouts_stderrs = []
 		self.test_timeout_queue = Queue()
 		run_test_timeout_thread(f"{self.name}_timeout", self, self.test_timeout_queue, TimeoutParam(timeout, f"{self.name} test"))
 
 	def __del__(self):
 		self.kill_all()
 
-	def register_process(self, process, full_stderr):
+	def register_process(self, process, name, full_stdout, full_stderr):
 		self.processes.append(process)
-		self.full_stderrs.append(full_stderr)
+		self.full_stdouts_stderrs.append((name, full_stdout, full_stderr))
 
 	def register_events_queue(self, queue):
 		self.test_timeout_queue.put(queue)
@@ -223,10 +227,22 @@ add_path {relpath(self.runner.data_dir, tmp_dir)}
 		while self.processes:
 			self.processes.pop().wait()
 
-	def check_valgrind_memcheck_errors(self):
-		if any(any("== ERROR SUMMARY: " in line and not "== ERROR SUMMARY: 0" in line for line in stderr) for stderr in self.full_stderrs):
-			return "\n".join(line for stderr in self.full_stderrs for line in stderr if line.startswith("=="))
-		return None
+	def append_valgrind_memcheck_errors(self, error):
+		for name, _, stderr in self.full_stdouts_stderrs:
+			if any("== ERROR SUMMARY: " in line and not "== ERROR SUMMARY: 0" in line for line in stderr):
+				joined_errors = "\n".join(line for line in stderr if line.startswith("=="))
+				error = (error if error else "") + f"--- valgrind memcheck: {name} ---\n{joined_errors}\n"
+		return error
+
+	def append_stdout_stderr(self, error):
+		for name, stdout, stderr in self.full_stdouts_stderrs:
+			if stdout:
+				joined_stdout = "\n".join(stdout)
+				error = (error if error else "") + f"--- stdout: {name} ---\n{joined_stdout}\n"
+			if stderr:
+				joined_stderr = "\n".join(stderr)
+				error = (error if error else "") + f"--- stderr: {name} ---\n{joined_stderr}\n"
+		return error
 
 def run_lines_thread(name, file, output_filename, output_list, output_queue):
 	def thread():
@@ -309,7 +325,7 @@ class Runnable:
 		stderr_wrapper = io.TextIOWrapper(self.process.stderr, encoding="utf-8", newline="\n")
 		self.full_stdout = []
 		self.full_stderr = []
-		test_env.register_process(self.process, self.full_stderr)
+		test_env.register_process(self.process, self.name, self.full_stdout, self.full_stderr)
 		self.events = Queue()
 		test_env.register_events_queue(self.events)
 		self.next_timeout_id = 0
