@@ -39,12 +39,6 @@ class Log(namedtuple("Log", "timestamp level line")):
 	def raise_on_error(self, timeout_id):
 		pass
 
-class LogParseError(namedtuple("LogParseError", "line")):
-	def raise_on_error(self, timeout_id): # pylint: disable=unused-argument
-		Log.parse(self.line)
-		# The above should have raised an error.
-		raise RuntimeError("log line shouldn't parse")
-
 class Exit(namedtuple("Exit", "")):
 	def raise_on_error(self, timeout_id): # pylint: disable=unused-argument
 		pass
@@ -248,7 +242,7 @@ def run_lines_thread(name, file, output_filename, output_list, output_queue):
 				try:
 					log = Log.parse(line)
 				except ValueError:
-					output_queue.put(LogParseError(line))
+					output_queue.put(Log(timestamp=None, level=None, line=line))
 				else:
 					output_queue.put(log)
 	Thread(name=name, target=thread, daemon=True).start()
