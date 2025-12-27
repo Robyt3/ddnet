@@ -238,18 +238,36 @@ jobs:
         ./DDNet-Server shutdown
 
     - name: Run integration tests
+      id: integration_test
       if: ${{ !contains(matrix.os, 'ubuntu') }}
+      continue-on-error: true
       run: |
         cp src/mastersrv/target/debug/mastersrv${{ matrix.executable-suffix }} headless
         python scripts/integration_test.py --show-full-output --test-mastersrv headless
 
     - name: Run integration tests with Valgrind's Memcheck and code coverage
+      id: integration_test_valgrind
       if: contains(matrix.os, 'ubuntu-latest')
+      continue-on-error: true
       run: |
         # Remove old coverage data:
         find headless -name '*.gcno' -o -name '*.gcda' -delete
         cp src/mastersrv/target/debug/mastersrv${{ matrix.executable-suffix }} headless
         python scripts/integration_test.py --show-full-output --test-mastersrv --valgrind-memcheck headless
+
+    - name: Upload integration test results
+      if: steps.integration_test.outcome == 'failure' || steps.integration_test_valgrind.outcome == 'failure'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ddnet-${{ matrix.name }}-integration-test-results
+        path: headless/integration_*
+        if-no-files-found: error
+
+    - name: Check integration test results
+      if: steps.integration_test.outcome == 'failure' || steps.integration_test_valgrind.outcome == 'failure'
+      run: |
+        echo "FAILURE: Integration test failed. See errors above and in uploaded artifacts."
+        exit 1
 
     - name: Upload Codecov report (integration tests)
       if: contains(matrix.os, 'ubuntu-latest')
