@@ -1,4 +1,5 @@
 #include "http_curl.h"
+#if !defined(CONF_PLATFORM_EMSCRIPTEN)
 
 #include <base/dbg.h>
 #include <base/log.h>
@@ -551,3 +552,5 @@ IEngineHttp *CreateEngineHttp()
 {
 	return new CHttpCurl;
 }
+
+#endif // !CONF_PLATFORM_EMSCRIPTEN
