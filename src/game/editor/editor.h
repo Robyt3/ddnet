@@ -127,8 +127,6 @@ class CEditor : public IEditor, public IEnvelopeEval
 	CPrompt m_Prompt;
 	CFontTyper m_FontTyper;
 
-	bool m_EditorWasUsedBefore = false;
-
 	IGraphics::CTextureHandle m_EntitiesTexture;
 
 	IGraphics::CTextureHandle m_FrontTexture;
@@ -160,8 +158,8 @@ public:
 	CUi *Ui() { return &m_UI; }
 	CRenderMap *RenderMap() { return &m_RenderMap; }
 
-	CEditorMap *Map() { return &m_Map; }
-	const CEditorMap *Map() const { return &m_Map; }
+	CEditorMap *Map();
+	const CEditorMap *Map() const;
 	CMapView *MapView() { return &m_MapView; }
 	const CMapView *MapView() const { return &m_MapView; }
 	CLayerSelector *LayerSelector() { return &m_LayerSelector; }
@@ -191,7 +189,7 @@ public:
 #define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) m_QuickAction##name(text, description, callback, disabled, active, button_color),
 #include <game/editor/quick_actions.h>
 #undef REGISTER_QUICK_ACTION
-		m_Map(this)
+		m_Dialog(DIALOG_NONE)
 	{
 		m_EntitiesTexture.Invalidate();
 		m_FrontTexture.Invalidate();
@@ -201,11 +199,8 @@ public:
 		m_TuneTexture.Invalidate();
 
 		m_Mode = MODE_LAYERS;
-		m_Dialog = 0;
 
 		m_BrushColorEnabled = true;
-
-		m_aFilenamePendingLoad[0] = '\0';
 
 		m_PopupEventActivated = false;
 		m_PopupEventWasActivated = false;
@@ -286,7 +281,7 @@ public:
 	void OnWindowResize() override;
 	void OnClose() override;
 	void OnDialogClose();
-	bool HasUnsavedData() const override { return Map()->m_Modified; }
+	bool HasUnsavedData() const override;
 	void UpdateMentions() override { m_Mentions++; }
 	void ResetMentions() override { m_Mentions = 0; }
 	void OnIngameMoved() override { m_IngameMoved = true; }
@@ -312,6 +307,7 @@ public:
 	float m_LastAutosaveUpdateTime = -1.0f;
 	void HandleAutosave();
 	void HandleWriterFinishJobs();
+	void UpdateMapDisplayNames();
 
 	// TODO: The name of the ShowFileDialogError function is not accurate anymore, this is used for generic error messages.
 	//       Popups in UI should be shared_ptrs to make this even more generic.
@@ -323,7 +319,10 @@ public:
 	std::map<const char *, CUi::SMessagePopupContext *, CStringKeyComparator> m_PopupMessageContexts;
 	[[gnu::format(printf, 2, 3)]] void ShowFileDialogError(const char *pFormat, ...);
 
-	void Reset(bool CreateDefault = true);
+	void Reset();
+	void AddDefaultMap();
+	void CloseMap(size_t Index, bool Confirm);
+	void InvokeSave();
 	bool Save(const char *pFilename) override;
 	bool Load(const char *pFilename, int StorageType) override;
 	bool HandleMapDrop(const char *pFilename, int StorageType) override;
@@ -351,18 +350,10 @@ public:
 
 	bool m_BrushColorEnabled;
 
-	/**
-	 * File which is pending to be loaded by @link POPEVENT_LOADDROP @endlink.
-	 */
-	char m_aFilenamePendingLoad[IO_MAX_PATH_LENGTH] = "";
-
 	enum
 	{
 		POPEVENT_EXIT = 0,
-		POPEVENT_LOAD,
-		POPEVENT_LOADCURRENT,
-		POPEVENT_LOADDROP,
-		POPEVENT_NEW,
+		POPEVENT_CLOSE_MAP,
 		POPEVENT_LARGELAYER,
 		POPEVENT_PREVENTUNUSEDTILES,
 		POPEVENT_IMAGEDIV16,
@@ -480,6 +471,7 @@ public:
 
 	IGraphics::CTextureHandle GetEntitiesTexture();
 
+	std::unique_ptr<CEditorMap> m_pToolsMap;
 	std::shared_ptr<CLayerGroup> m_pBrush;
 	std::shared_ptr<CLayerTiles> m_pTilesetPicker;
 	std::shared_ptr<CLayerQuads> m_pQuadsetPicker;
@@ -630,6 +622,7 @@ public:
 		CPoint m_aPoints[NUM_POINTS];
 	};
 	void DoMapEditor(CUIRect View);
+	void DoMapTabs(CUIRect MapTabs);
 	void DoToolbarLayers(CUIRect Toolbar);
 	void DoToolbarImages(CUIRect Toolbar);
 	void DoToolbarSounds(CUIRect Toolbar);
@@ -757,7 +750,8 @@ public:
 	void AdjustBrushSpecialTiles(bool UseNextFree, int Adjust = 0);
 
 private:
-	CEditorMap m_Map;
+	std::vector<std::unique_ptr<CEditorMap>> m_vpMaps;
+	size_t m_SelectedMap;
 
 	CEditorHistory &ActiveHistory();
 

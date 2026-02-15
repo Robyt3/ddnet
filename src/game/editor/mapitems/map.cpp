@@ -56,6 +56,8 @@ void CEditorMap::OnModify()
 	m_Modified = true;
 	m_ModifiedAuto = true;
 	m_LastModifiedTime = Editor()->Client()->GlobalTime();
+	// Stopped scheduled map closing if the map was modified
+	m_CloseOnSave = false;
 }
 
 void CEditorMap::ResetModifiedState()
@@ -70,6 +72,7 @@ void CEditorMap::Clean()
 {
 	m_aFilename[0] = '\0';
 	m_ValidSaveFilename = false;
+	m_CloseOnSave = false;
 	ResetModifiedState();
 
 	m_vpGroups.clear();
