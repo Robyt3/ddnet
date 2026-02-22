@@ -6,15 +6,15 @@
 #include <cstddef>
 
 /**
- * Shell and OS specific functionality.
+ * OS specific functionality.
  *
- * @defgroup Shell Shell
+ * @defgroup OS OS
  */
 
 /**
  * Fixes the command line arguments to be encoded in UTF-8 on all systems.
  *
- * @ingroup Shell
+ * @ingroup OS
  *
  * @param argc A pointer to the argc parameter that was passed to the main function.
  * @param argv A pointer to the argv parameter that was passed to the main function.
@@ -26,7 +26,7 @@ void cmdline_fix(int *argc, const char ***argv);
 /**
  * Frees memory that was allocated by @link cmdline_fix @endlink.
  *
- * @ingroup Shell
+ * @ingroup OS
  *
  * @param argc The argc obtained from `cmdline_fix`.
  * @param argv The argv obtained from `cmdline_fix`.
@@ -37,7 +37,7 @@ void cmdline_free(int argc, const char **argv);
  * Fixes the command line arguments to be encoded in UTF-8 on all systems.
  * This is a RAII wrapper for @link cmdline_fix @endlink and @link cmdline_free @endlink.
  *
- * @ingroup Shell
+ * @ingroup OS
  */
 class CCmdlineFix
 {
@@ -62,7 +62,7 @@ public:
 /**
  * Opens a link in the browser.
  *
- * @ingroup Shell
+ * @ingroup OS
  *
  * @param link The link to open in a browser.
  *
@@ -76,7 +76,7 @@ int open_link(const char *link);
 /**
  * Opens a file or directory with the default program.
  *
- * @ingroup Shell
+ * @ingroup OS
  *
  * @param path The file or folder to open with the default program.
  *
@@ -91,7 +91,7 @@ int open_file(const char *path);
 /**
  * Returns a human-readable version string of the operating system.
  *
- * @ingroup Shell
+ * @ingroup OS
  *
  * @param version Buffer to use for the output.
  * @param length Length of the output buffer.
@@ -107,7 +107,7 @@ bool os_version_str(char *version, size_t length);
  * If the preferred locale could not be determined this function
  * falls back to the locale `"en-US"`.
  *
- * @ingroup Shell
+ * @ingroup OS
  *
  * @param locale Buffer to use for the output.
  * @param length Length of the output buffer.
