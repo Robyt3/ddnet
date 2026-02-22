@@ -78,7 +78,7 @@ void cmdline_free(int argc, const char **argv)
 }
 
 #if !defined(CONF_PLATFORM_ANDROID)
-int open_link(const char *link)
+int os_open_link(const char *link)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_link = windows_utf8_to_wide(link);
@@ -118,10 +118,10 @@ int open_link(const char *link)
 #endif
 }
 
-int open_file(const char *path)
+int os_open_file(const char *path)
 {
 #if defined(CONF_PLATFORM_MACOS)
-	return open_link(path);
+	return os_open_link(path);
 #else
 	// Create a file link so the path can contain forward and
 	// backward slashes. But the file link must be absolute.
@@ -136,7 +136,7 @@ int open_file(const char *path)
 	else
 		workingDir[0] = '\0';
 	str_format(buf, sizeof(buf), "file://%s%s", workingDir, path);
-	return open_link(buf);
+	return os_open_link(buf);
 #endif
 }
 #endif // !defined(CONF_PLATFORM_ANDROID)

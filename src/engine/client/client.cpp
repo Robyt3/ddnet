@@ -5226,7 +5226,7 @@ static bool ViewLinkImpl(const char *pLink)
 	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
 	return false;
 #else
-	if(open_link(pLink))
+	if(os_open_link(pLink))
 	{
 		return true;
 	}

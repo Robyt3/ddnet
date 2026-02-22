@@ -71,7 +71,7 @@ public:
  * @remark The strings are treated as null-terminated strings.
  * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
  */
-int open_link(const char *link);
+int os_open_link(const char *link);
 
 /**
  * Opens a file or directory with the default program.
@@ -85,7 +85,7 @@ int open_link(const char *link);
  * @remark The strings are treated as null-terminated strings.
  * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
  */
-int open_file(const char *path);
+int os_open_file(const char *path);
 #endif // !defined(CONF_PLATFORM_ANDROID)
 
 /**
