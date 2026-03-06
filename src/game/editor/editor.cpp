@@ -4413,8 +4413,6 @@ void CEditor::Reset(bool CreateDefault)
 	m_AnimateTime = 0;
 	m_Animate = false;
 
-	m_SettingsCommandInput.Clear();
-	m_MapSettingsCommandContext.Reset();
 	m_RenderLayersState.Reset();
 }
 
