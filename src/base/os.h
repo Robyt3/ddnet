@@ -4,6 +4,8 @@
 #include "detect.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 
 /**
  * OS specific functionality.
@@ -115,5 +117,35 @@ bool os_version_str(char *version, size_t length);
  * @remark The strings are treated as null-terminated strings.
  */
 void os_locale_str(char *locale, size_t length);
+
+/**
+ * Memory usage summary.
+ *
+ * @ingroup OS
+ *
+ * @see os_memory_usage
+ */
+class CMemoryUsageInfo
+{
+public:
+	/**
+	 * The amount of main memory in bytes that is currently in use.
+	 */
+	uint64_t m_UsedBytes;
+
+	/**
+	 * The total amount of main memory in bytes.
+	 */
+	uint64_t m_TotalBytes;
+};
+
+/**
+ * Returns a summary of the current memory usage of the operating system.
+ *
+ * @ingroup OS
+ *
+ * @return Memory usage summary on success. Empty optional on error or if not implemented on the current platform.
+ */
+std::optional<CMemoryUsageInfo> os_memory_usage();
 
 #endif

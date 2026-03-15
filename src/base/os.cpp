@@ -17,6 +17,11 @@
 
 #if defined(CONF_PLATFORM_MACOS)
 #include <CoreFoundation/CoreFoundation.h>
+#include <mach/mach.h> // host_*, mach_*
+#elif defined(CONF_PLATFORM_LINUX) || defined(CONF_PLATFORM_ANDROID)
+#include <sys/sysinfo.h> // sysinfo
+#elif defined(CONF_PLATFORM_EMSCRIPTEN)
+#include <emscripten/heap.h> // emscripten_get_heap_size, emscripten_get_heap_max
 #endif
 #elif defined(CONF_FAMILY_WINDOWS)
 #include <objbase.h> // required for shellapi.h
@@ -286,4 +291,73 @@ void os_locale_str(char *locale, size_t length)
 	// i.e. if only the C or POSIX locale is available.
 	if(locale[0] == '\0' || str_comp(locale, "C") == 0 || str_comp(locale, "POSIX") == 0)
 		str_copy(locale, "en-US", length);
+}
+
+std::optional<CMemoryUsageInfo> os_memory_usage()
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	MEMORYSTATUSEX memory_status;
+	memory_status.dwLength = sizeof(memory_status);
+	if(!GlobalMemoryStatusEx(&memory_status))
+	{
+		return std::nullopt;
+	}
+
+	CMemoryUsageInfo info;
+	info.m_TotalBytes = memory_status.ullTotalPhys;
+	info.m_UsedBytes = memory_status.ullTotalPhys - memory_status.ullAvailPhys;
+	return info;
+#elif defined(CONF_PLATFORM_MACOS)
+	host_t host = mach_host_self();
+
+	host_basic_info_data_t host_basic_info;
+	mach_msg_type_number_t host_basic_info_type = HOST_BASIC_INFO_COUNT;
+	if(host_info(host, HOST_BASIC_INFO, reinterpret_cast<host_info_t>(&host_basic_info), &host_basic_info_type) != KERN_SUCCESS)
+	{
+		return std::nullopt;
+	}
+
+	vm_statistics64_data_t vm_statistics;
+	mach_msg_type_number_t vm_statistics_type = HOST_VM_INFO64_COUNT;
+	if(host_statistics64(host, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&vm_statistics), &vm_statistics_type) != KERN_SUCCESS)
+	{
+		return std::nullopt;
+	}
+
+	vm_size_t page_size;
+	if(host_page_size(host, &page_size) != KERN_SUCCESS)
+	{
+		return std::nullopt;
+	}
+
+	const uint64_t used_pages =
+		vm_statistics.active_count +
+		vm_statistics.inactive_count +
+		vm_statistics.wire_count +
+		vm_statistics.compressor_page_count;
+
+	CMemoryUsageInfo info;
+	info.m_TotalBytes = host_basic_info.max_mem;
+	info.m_UsedBytes = used_pages * page_size;
+	return info;
+#elif defined(CONF_PLATFORM_LINUX) || defined(CONF_PLATFORM_ANDROID)
+	struct sysinfo system_info;
+	if(sysinfo(&system_info) != 0)
+	{
+		return std::nullopt;
+	}
+
+	CMemoryUsageInfo info;
+	info.m_TotalBytes = static_cast<uint64_t>(system_info.totalram) * system_info.mem_unit;
+	info.m_UsedBytes = info.m_TotalBytes - static_cast<uint64_t>(system_info.freeram) * system_info.mem_unit;
+	return info;
+#elif defined(CONF_PLATFORM_EMSCRIPTEN)
+	CMemoryUsageInfo info;
+	info.m_UsedBytes = emscripten_get_heap_size();
+	info.m_TotalBytes = emscripten_get_heap_max();
+	return info;
+#else
+	// Not implemented
+	return std::nullopt;
+#endif
 }
