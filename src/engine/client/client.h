@@ -7,6 +7,7 @@
 #include "smooth_time.h"
 
 #include <base/hash.h>
+#include <base/os.h>
 #include <base/types.h>
 
 #include <engine/client.h>
@@ -269,7 +270,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// For RenderDebug function
 	NETSTATS m_NetstatsPrev = {};
 	NETSTATS m_NetstatsCurrent = {};
-	std::chrono::nanoseconds m_NetstatsLastUpdate = std::chrono::nanoseconds(0);
+	std::optional<CMemoryUsageInfo> m_MemoryUsageInfo = std::nullopt;
+	std::chrono::nanoseconds m_DebugLastUpdate = std::chrono::nanoseconds(0);
 
 	// For DummyName function
 	char m_aAutomaticDummyName[MAX_NAME_LENGTH];

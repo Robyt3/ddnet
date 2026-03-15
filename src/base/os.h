@@ -4,6 +4,8 @@
 #include "detect.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 
 /**
  * OS specific functionality.
@@ -115,5 +117,14 @@ bool os_version_str(char *version, size_t length);
  * @remark The strings are treated as null-terminated strings.
  */
 void os_locale_str(char *locale, size_t length);
+
+class CMemoryUsageInfo
+{
+public:
+	uint64_t m_UsedBytes;
+	uint64_t m_TotalBytes;
+};
+
+std::optional<CMemoryUsageInfo> os_memory_usage();
 
 #endif

@@ -940,11 +940,12 @@ void CClient::RenderDebug()
 	}
 
 	const std::chrono::nanoseconds Now = time_get_nanoseconds();
-	if(Now - m_NetstatsLastUpdate > 1s)
+	if(Now - m_DebugLastUpdate > 1s)
 	{
-		m_NetstatsLastUpdate = Now;
+		m_DebugLastUpdate = Now;
 		m_NetstatsPrev = m_NetstatsCurrent;
 		net_stats(&m_NetstatsCurrent);
+		m_MemoryUsageInfo = os_memory_usage();
 	}
 
 	char aBuffer[512];
@@ -966,17 +967,25 @@ void CClient::RenderDebug()
 	str_format(aBuffer, sizeof(aBuffer), "Frametime: %4d us", round_to_int(m_FrameTimeAverage * 1000000.0f));
 	Graphics()->QuadsText(20.0f * FontSize, 2 + FontSize, FontSize, aBuffer);
 
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Texture memory", Graphics()->TextureMemoryUsage() / 1024);
-	Graphics()->QuadsText(32.0f * FontSize, 2, FontSize, aBuffer);
+	if(m_MemoryUsageInfo.has_value())
+	{
+		str_format(aBuffer, sizeof(aBuffer), "%16s: %.2f / %.2f GiB", "Main memory",
+			m_MemoryUsageInfo.value().m_UsedBytes / 1024.0 / 1024.0 / 1024.0,
+			m_MemoryUsageInfo.value().m_TotalBytes / 1024.0 / 1024.0 / 1024.0);
+		Graphics()->QuadsText(32.0f * FontSize, 2, FontSize, aBuffer);
+	}
 
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Buffer memory", Graphics()->BufferMemoryUsage() / 1024);
+	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Texture memory", Graphics()->TextureMemoryUsage() / 1024);
 	Graphics()->QuadsText(32.0f * FontSize, 2 + FontSize, FontSize, aBuffer);
 
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Streamed memory", Graphics()->StreamedMemoryUsage() / 1024);
+	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Buffer memory", Graphics()->BufferMemoryUsage() / 1024);
 	Graphics()->QuadsText(32.0f * FontSize, 2 + 2 * FontSize, FontSize, aBuffer);
 
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Staging memory", Graphics()->StagingMemoryUsage() / 1024);
+	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Streamed memory", Graphics()->StreamedMemoryUsage() / 1024);
 	Graphics()->QuadsText(32.0f * FontSize, 2 + 3 * FontSize, FontSize, aBuffer);
+
+	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Staging memory", Graphics()->StagingMemoryUsage() / 1024);
+	Graphics()->QuadsText(32.0f * FontSize, 2 + 4 * FontSize, FontSize, aBuffer);
 
 	// Network
 	{
@@ -3226,6 +3235,8 @@ void CClient::Run()
 	auto LastTime = time_get_nanoseconds();
 	int64_t LastRenderTime = time_get();
 
+	dbg_assert(false, "test");
+
 	while(true)
 	{
 		set_new_tick();
@@ -4817,6 +4828,19 @@ int main(int argc, const char **argv)
 		char aGpuInfo[512];
 		pClient->GetGpuInfoString(aGpuInfo);
 
+		char aMemoryInfo[64];
+		std::optional<CMemoryUsageInfo> MemoryUsage = os_memory_usage();
+		if(MemoryUsage.has_value())
+		{
+			str_format(aMemoryInfo, sizeof(aMemoryInfo), "Main memory: %.2f / %.2f GiB",
+				MemoryUsage.value().m_UsedBytes / 1024.0 / 1024.0 / 1024.0,
+				MemoryUsage.value().m_TotalBytes / 1024.0 / 1024.0 / 1024.0);
+		}
+		else
+		{
+			str_copy(aMemoryInfo, "Main memory: could not be determined");
+		}
+
 		char aMessage[2048];
 		str_format(aMessage, sizeof(aMessage),
 			"%s"
@@ -4845,6 +4869,7 @@ int main(int argc, const char **argv)
 			"\n"
 			"Game version: %s %s %s\n"
 			"OS version: %s\n\n"
+			"%s\n" // Memory info
 			"%s", // GPU info
 			pPreamble,
 			pMsg,
@@ -4852,6 +4877,7 @@ int main(int argc, const char **argv)
 			CONF_PLATFORM_STRING, CONF_ARCH_ENDIAN_STRING,
 			GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "",
 			aOsVersionString,
+			aMemoryInfo,
 			aGpuInfo);
 		// Also log all of this information to the assertion log file
 		log_error("assertion", "%s", aMessage);
