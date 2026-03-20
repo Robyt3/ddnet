@@ -116,6 +116,7 @@ void CEditorMap::Clean()
 	m_ProofModeState.Reset();
 	m_EnvelopeEditorState.Reset(Editor());
 	m_MapSettingsCommandContext.Reset();
+	m_FontTyperState.Reset();
 
 	m_QuadKnife.m_Active = false;
 	m_QuadKnife.m_Count = 0;
