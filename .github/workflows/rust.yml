@@ -14,9 +14,9 @@ jobs:
       CARGO_HTTP_MULTIPLEXING: false
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
     - name: Cache Rust dependencies
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
     - name: Run Rustdoc
       run: |
         RUSTDOCFLAGS=-Dwarnings DDNET_TEST_NO_LINK=1 cargo doc
@@ -27,9 +27,9 @@ jobs:
       CARGO_HTTP_MULTIPLEXING: false
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
     - name: Cache Rust dependencies
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
       with:
            workspaces: |
                src/mastersrv
@@ -47,9 +47,9 @@ jobs:
       CARGO_HTTP_MULTIPLEXING: false
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
     - name: Cache Rust dependencies
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
       with:
            workspaces: |
                src/mastersrv
@@ -71,9 +71,9 @@ jobs:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
     - name: Cache Rust dependencies
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
       with:
           workspaces:  |
               src/mastersrv

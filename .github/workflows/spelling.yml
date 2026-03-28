@@ -13,5 +13,5 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
     - uses: crate-ci/typos@v1.39.0
