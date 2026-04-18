@@ -62,7 +62,7 @@ fi
 # These are the properties of the default Android debug key. The debug key will
 # automatically be created during the Gradle build if it does not exist already,
 # so you don't need to create it yourself.
-DEFAULT_KEY_NAME=~/.android/debug.keystore
+DEFAULT_KEY_NAME="$(${PATH_WRAPPER} "$(realpath ~/.android/debug.keystore)")"
 DEFAULT_KEY_PW=android
 DEFAULT_KEY_ALIAS=androiddebugkey
 
