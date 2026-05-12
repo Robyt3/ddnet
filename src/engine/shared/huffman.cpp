@@ -253,6 +253,10 @@ int CHuffman::Decompress(const void *pInput, int InputSize, void *pOutput, int O
 		{
 			// remove the bits that the lut checked up for us
 			Bits >>= HUFFMAN_LUTBITS;
+			if(Bitcount < HUFFMAN_LUTBITS)
+			{
+				return -1;
+			}
 			Bitcount -= HUFFMAN_LUTBITS;
 
 			// walk the tree bit by bit
