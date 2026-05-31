@@ -153,52 +153,25 @@ void CScrollRegion::End()
 
 	Slider.y += m_ScrollY / MaxScroll * MaxSlider;
 
-	bool Grabbed = false;
 	const void *pId = &m_ScrollY;
-	const bool InsideSlider = Ui()->MouseHovered(&Slider);
-	const bool InsideRail = Ui()->MouseHovered(&m_RailRect);
-
-	if(Ui()->CheckActiveItem(pId) && Ui()->MouseButton(0))
+	const bool WasActive = Ui()->ActiveItem() == pId;
+	Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
+	if(Ui()->CheckActiveItem(pId))
 	{
-		float MouseY = Ui()->MouseY();
-		m_ScrollY += (MouseY - (Slider.y + m_SliderGrabPos)) / MaxSlider * MaxScroll;
-		m_SliderGrabPos = std::clamp(m_SliderGrabPos, 0.0f, SliderHeight);
-		m_AnimTargetScrollY = m_ScrollY;
-		m_AnimTime = 0.0f;
-		Grabbed = true;
-	}
-	else if(InsideSlider)
-	{
-		if(!Ui()->MouseButton(0))
-			Ui()->SetHotItem(pId);
-
-		if(!Ui()->CheckActiveItem(pId) && Ui()->MouseButtonClicked(0))
+		if(!WasActive)
 		{
-			Ui()->SetActiveItem(pId);
-			m_SliderGrabPos = Ui()->MouseY() - Slider.y;
-			m_AnimTargetScrollY = m_ScrollY;
-			m_AnimTime = 0.0f;
+			m_SliderGrabPos = Ui()->MouseHovered(&Slider) ? (Ui()->MouseY() - Slider.y) : (Slider.h / 2.0f);
+			m_SliderGrabPos = std::clamp(m_SliderGrabPos, 0.0f, SliderHeight);
 		}
-	}
-	else if(InsideRail && Ui()->MouseButtonClicked(0))
-	{
-		m_ScrollY += (Ui()->MouseY() - (Slider.y + Slider.h / 2.0f)) / MaxSlider * MaxScroll;
-		Ui()->SetHotItem(pId);
-		Ui()->SetActiveItem(pId);
-		m_SliderGrabPos = Slider.h / 2.0f;
+		m_ScrollY += (Ui()->MouseY() - (Slider.y + m_SliderGrabPos)) / MaxSlider * MaxScroll;
 		m_AnimTargetScrollY = m_ScrollY;
 		m_AnimTime = 0.0f;
-	}
-
-	if(Ui()->CheckActiveItem(pId) && !Ui()->MouseButton(0))
-	{
-		Ui()->SetActiveItem(nullptr);
 	}
 
 	m_ScrollY = std::clamp(m_ScrollY, 0.0f, MaxScroll);
 	m_ContentScrollOff.y = -m_ScrollY;
 
-	Slider.Draw(m_Params.SliderColor(Grabbed, Ui()->HotItem() == pId), IGraphics::CORNER_ALL, Slider.w / 2.0f);
+	Slider.Draw(m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId), IGraphics::CORNER_ALL, Slider.w / 2.0f);
 }
 
 bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere)
