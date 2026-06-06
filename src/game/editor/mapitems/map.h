@@ -154,6 +154,7 @@ public:
 	CMapSettingsBackend::CContextWithInput m_MapSettingsCommandContext;
 	CFontTyper::CState m_FontTyperState;
 	CEditorUiElements m_EditorUiElements;
+	CEditorHistoryUiState m_EditorHistoryUiState;
 
 	// Housekeeping
 	void Clean();
