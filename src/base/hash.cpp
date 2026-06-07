@@ -1,11 +1,14 @@
 #include "hash.h"
 
+#include "dbg.h"
 #include "hash_ctxt.h"
 #include "mem.h"
 #include "str.h"
 
 static void digest_str(const unsigned char *digest, size_t digest_len, char *str, size_t max_len)
 {
+	dbg_assert(max_len != 0, "Invalid max_len: %" PRIzu, max_len);
+
 	if(max_len > digest_len * 2 + 1)
 	{
 		max_len = digest_len * 2 + 1;

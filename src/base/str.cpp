@@ -573,11 +573,13 @@ int str_countchr(const char *haystack, char needle)
 	return count;
 }
 
-void str_hex(char *dst, int dst_size, const void *data, int data_size)
+void str_hex(char *dst, size_t dst_size, const void *data, size_t data_size)
 {
+	dbg_assert(dst_size != 0, "Invalid dst_size: %" PRIzu, dst_size);
+
 	static const char hex[] = "0123456789ABCDEF";
-	int data_index;
-	int dst_index;
+	size_t data_index;
+	size_t dst_index;
 	for(data_index = 0, dst_index = 0; data_index < data_size && dst_index < dst_size - 3; data_index++)
 	{
 		dst[data_index * 3] = hex[((const unsigned char *)data)[data_index] >> 4];
@@ -588,12 +590,15 @@ void str_hex(char *dst, int dst_size, const void *data, int data_size)
 	dst[dst_index] = '\0';
 }
 
-void str_hex_cstyle(char *dst, int dst_size, const void *data, int data_size, int bytes_per_line)
+void str_hex_cstyle(char *dst, size_t dst_size, const void *data, size_t data_size, unsigned bytes_per_line)
 {
+	dbg_assert(dst_size != 0, "Invalid dst_size: %" PRIzu, dst_size);
+	dbg_assert(bytes_per_line != 0, "Invalid bytes_per_line: %d", bytes_per_line);
+
 	static const char hex[] = "0123456789ABCDEF";
-	int data_index;
-	int dst_index;
-	int remaining_bytes_per_line = bytes_per_line;
+	size_t data_index;
+	size_t dst_index;
+	unsigned remaining_bytes_per_line = bytes_per_line;
 	for(data_index = 0, dst_index = 0; data_index < data_size && dst_index < dst_size - 6; data_index++)
 	{
 		--remaining_bytes_per_line;
@@ -663,16 +668,17 @@ static int byteval(const char *hex, unsigned char *dst)
 	return 0;
 }
 
-int str_hex_decode(void *dst, int dst_size, const char *src)
+int str_hex_decode(void *dst, size_t dst_size, const char *src)
 {
-	unsigned char *cdst = (unsigned char *)dst;
-	int slen = str_length(src);
-	int len = slen / 2;
-	int i;
+	dbg_assert(dst_size != 0, "Invalid dst_size: %" PRIzu, dst_size);
+
+	size_t slen = str_length(src);
 	if(slen != dst_size * 2)
 		return 2;
 
-	for(i = 0; i < len && dst_size; i++, dst_size--)
+	unsigned char *cdst = (unsigned char *)dst;
+	size_t len = slen / 2;
+	for(size_t i = 0; i < len && dst_size; i++, dst_size--)
 	{
 		if(byteval(src + i * 2, cdst++))
 			return 1;
@@ -680,15 +686,17 @@ int str_hex_decode(void *dst, int dst_size, const char *src)
 	return 0;
 }
 
-void str_base64(char *dst, int dst_size, const void *data_raw, int data_size)
+void str_base64(char *dst, size_t dst_size, const void *data_raw, size_t data_size)
 {
+	dbg_assert(dst_size != 0, "Invalid dst_size: %" PRIzu, dst_size);
+
 	static const char DIGITS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 	const unsigned char *data = (const unsigned char *)data_raw;
 	unsigned value = 0;
-	int num_bits = 0;
-	int i = 0;
-	int o = 0;
+	unsigned num_bits = 0;
+	size_t i = 0;
+	size_t o = 0;
 
 	dst_size -= 1;
 	dst[dst_size] = 0;
@@ -757,14 +765,11 @@ static int base64_digit_value(char digit)
 	return -1;
 }
 
-int str_base64_decode(void *dst_raw, int dst_size, const char *data)
+size_t str_base64_decode(void *dst_raw, size_t dst_size, const char *data)
 {
-	unsigned char *dst = (unsigned char *)dst_raw;
-	int data_len = str_length(data);
+	dbg_assert(dst_size != 0, "Invalid dst_size: %" PRIzu, dst_size);
 
-	int i;
-	int o = 0;
-
+	size_t data_len = str_length(data);
 	if(data_len % 4 != 0)
 	{
 		return -3;
@@ -774,13 +779,13 @@ int str_base64_decode(void *dst_raw, int dst_size, const char *data)
 		// Output buffer too small.
 		return -2;
 	}
-	for(i = 0; i < data_len; i += 4)
+
+	unsigned char *dst = (unsigned char *)dst_raw;
+	size_t o = 0;
+	for(size_t i = 0; i < data_len; i += 4)
 	{
-		int num_output_bytes = 3;
+		size_t num_output_bytes = 3;
 		char copy[4];
-		int d[4];
-		int value;
-		int b;
 		mem_copy(copy, data + i, sizeof(copy));
 		if(i == data_len - 4)
 		{
@@ -795,6 +800,7 @@ int str_base64_decode(void *dst_raw, int dst_size, const char *data)
 				}
 			}
 		}
+		int d[4];
 		d[0] = base64_digit_value(copy[0]);
 		d[1] = base64_digit_value(copy[1]);
 		d[2] = base64_digit_value(copy[2]);
@@ -804,8 +810,8 @@ int str_base64_decode(void *dst_raw, int dst_size, const char *data)
 			// Invalid digit.
 			return -1;
 		}
-		value = (d[0] << 18) | (d[1] << 12) | (d[2] << 6) | d[3];
-		for(b = 0; b < 3; b++)
+		int value = (d[0] << 18) | (d[1] << 12) | (d[2] << 6) | d[3];
+		for(size_t b = 0; b < 3; b++)
 		{
 			unsigned char byte_value = (value >> (16 - 8 * b)) & 0xff;
 			if(b < num_output_bytes)

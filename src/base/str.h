@@ -592,7 +592,7 @@ int str_countchr(const char *haystack, char needle);
  *
  * @remark The destination buffer will be null-terminated.
  */
-void str_hex(char *dst, int dst_size, const void *data, int data_size);
+void str_hex(char *dst, size_t dst_size, const void *data, size_t data_size);
 
 /**
  * Takes a datablock and generates a hex string of it, in the C style array format,
@@ -610,7 +610,7 @@ void str_hex(char *dst, int dst_size, const void *data, int data_size);
  *
  * @remark The destination buffer will be null-terminated.
  */
-void str_hex_cstyle(char *dst, int dst_size, const void *data, int data_size, int bytes_per_line = 12);
+void str_hex_cstyle(char *dst, size_t dst_size, const void *data, size_t data_size, unsigned bytes_per_line = 12);
 
 /**
  * Takes a hex string *without spaces between bytes* and returns a byte array.
@@ -627,7 +627,7 @@ void str_hex_cstyle(char *dst, int dst_size, const void *data, int data_size, in
  *
  * @remark The contents of the buffer is only valid on success.
  */
-int str_hex_decode(void *dst, int dst_size, const char *src);
+int str_hex_decode(void *dst, size_t dst_size, const char *src);
 
 /**
  * Takes a datablock and generates the base64 encoding of it.
@@ -641,7 +641,7 @@ int str_hex_decode(void *dst, int dst_size, const char *src);
  *
  * @remark The destination buffer will be null-terminated
  */
-void str_base64(char *dst, int dst_size, const void *data, int data_size);
+void str_base64(char *dst, size_t dst_size, const void *data, size_t data_size);
 
 /**
  * Takes a base64 string without any whitespace and correct
@@ -658,7 +658,7 @@ void str_base64(char *dst, int dst_size, const void *data, int data_size);
  *
  * @remark The contents of the buffer is only valid on success.
  */
-int str_base64_decode(void *dst, int dst_size, const char *data);
+size_t str_base64_decode(void *dst, size_t dst_size, const char *data);
 
 /**
  * Escapes \ and " characters in a string.
