@@ -167,15 +167,19 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::SState &St
 
 static void ParseVersionString(EBackendType BackendType, const char *pStr, int &VersionMajor, int &VersionMinor, int &VersionPatch)
 {
-	// if backend is GLES, it starts with "OpenGL ES " or OpenGL ES-CM for older contexts, rest is the same
+	// If the backend is GLES, the version string starts with `OpenGL ES ` or `OpenGL ES-CM ` for older contexts, rest is the same.
 	if(BackendType == BACKEND_TYPE_OPENGL_ES)
 	{
-		int StrLenGLES = str_length("OpenGL ES ");
-		int StrLenGLESCM = str_length("OpenGL ES-CM ");
-		if(str_comp_num(pStr, "OpenGL ES ", StrLenGLES) == 0)
-			pStr += StrLenGLES;
-		else if(str_comp_num(pStr, "OpenGL ES-CM ", StrLenGLESCM) == 0)
-			pStr += StrLenGLESCM;
+		const char *pSkippedPrefix = str_startswith(pStr, "OpenGL ES ");
+		if(pSkippedPrefix != nullptr)
+		{
+			pStr = pSkippedPrefix;
+		}
+		pSkippedPrefix = str_startswith(pStr, "OpenGL ES-CM ");
+		if(pSkippedPrefix != nullptr)
+		{
+			pStr = pSkippedPrefix;
+		}
 	}
 
 	char aCurNumberStr[32];
