@@ -189,7 +189,7 @@ static void ParseVersionString(EBackendType BackendType, const char *pStr, int &
 	bool LastWasNumber = false;
 	while(*pStr && TotalNumbersPassed < 3)
 	{
-		if(str_isnum(*pStr))
+		if(str_isnum(*pStr) && CurNumberStrLen < std::size(aCurNumberStr) - 1)
 		{
 			aCurNumberStr[CurNumberStrLen++] = (char)*pStr;
 			LastWasNumber = true;
