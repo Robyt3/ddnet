@@ -870,7 +870,7 @@ void CEditor::UpdateHotSoundSource(const CLayerSounds *pLayer)
 	const void *pMinSourceId = nullptr;
 
 	const auto UpdateMinimum = [&](vec2 Position, const void *pId) {
-		const float CurrDist = length_squared((Position - MouseWorld) / MapView()->MouseWorldScale());
+		const float CurrDist = distance_squared(Position, MouseWorld) / (MapView()->MouseWorldScale() * MapView()->MouseWorldScale());
 		if(CurrDist < MinDist)
 		{
 			MinDist = CurrDist;
@@ -1409,7 +1409,7 @@ void CEditor::DoQuad(int LayerIndex, const std::shared_ptr<CLayerQuads> &pLayer,
 		{
 			if(s_Operation == OP_SELECT)
 			{
-				if(length_squared(s_MouseStart - Ui()->MousePos()) > 20.0f)
+				if(distance_squared(s_MouseStart, Ui()->MousePos()) > 20.0f)
 				{
 					if(!Map()->IsQuadSelected(Index))
 						Map()->SelectQuad(Index);
@@ -1709,7 +1709,7 @@ void CEditor::DoQuadPoint(int LayerIndex, const std::shared_ptr<CLayerQuads> &pL
 		{
 			if(s_Operation == OP_SELECT)
 			{
-				if(length_squared(s_MouseStart - Ui()->MousePos()) > 20.0f)
+				if(distance_squared(s_MouseStart, Ui()->MousePos()) > 20.0f)
 				{
 					if(!Map()->IsQuadPointSelected(QuadIndex, V))
 						Map()->SelectQuadPoint(QuadIndex, V);
@@ -2114,7 +2114,7 @@ void CEditor::UpdateHotQuadPoint(const CLayerQuads *pLayer)
 	const void *pMinPointId = nullptr;
 
 	const auto UpdateMinimum = [&](vec2 Position, const void *pId) {
-		const float CurrDist = length_squared((Position - MouseWorld) / MapView()->MouseWorldScale());
+		const float CurrDist = distance_squared(Position, MouseWorld) / (MapView()->MouseWorldScale() * MapView()->MouseWorldScale());
 		if(CurrDist < MinDist)
 		{
 			MinDist = CurrDist;
