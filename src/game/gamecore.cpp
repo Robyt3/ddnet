@@ -134,6 +134,7 @@ void CCharacterCore::Init(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore
 
 	m_pTeams = pTeams;
 	m_Id = -1;
+	m_HookedPlayer = -1;
 }
 
 void CCharacterCore::SetCoreWorld(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore *pTeams)

@@ -1310,14 +1310,17 @@ CCharacter::CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar,
 	m_QueuedWeapon = -1;
 	m_LastRefillJumps = false;
 	m_PrevPrevPos = m_PrevPos = m_Pos = vec2(pChar->m_X, pChar->m_Y);
-	m_Core.Reset();
 	m_Core.Init(&GameWorld()->m_Core, GameWorld()->Collision(), GameWorld()->Teams());
+	m_Core.Reset();
 	m_Core.m_Id = Id;
 	m_Core.m_ActiveWeapon = -1; // set by the first Read below
 	mem_zero(&m_Core.m_Ninja, sizeof(m_Core.m_Ninja));
 	m_Core.m_LeftWall = true;
 	m_ReloadTimer = 0;
+	m_AttackTick = 0;
 	m_NumObjectsHit = 0;
+	m_MoveRestrictions = 0;
+	m_PainSoundTimer = 0;
 	m_LastRefillJumps = false;
 	m_CanMoveInFreeze = false;
 	m_TeleCheckpoint = 0;

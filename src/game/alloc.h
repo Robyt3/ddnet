@@ -26,7 +26,6 @@ public: \
 	void *operator new(size_t Size) \
 	{ \
 		void *pObj = malloc(Size); \
-		mem_zero(pObj, Size); \
 		return pObj; \
 	} \
 	void operator delete(void *pPtr) \
@@ -60,7 +59,6 @@ private:
 		dbg_assert(!gs_PoolUsed##POOLTYPE[Id], "already used"); \
 		ASAN_UNPOISON_MEMORY_REGION(gs_PoolData##POOLTYPE[Id], sizeof(gs_PoolData##POOLTYPE[Id])); \
 		gs_PoolUsed##POOLTYPE[Id] = 1; \
-		mem_zero(gs_PoolData##POOLTYPE[Id], sizeof(gs_PoolData##POOLTYPE[Id])); \
 		return gs_PoolData##POOLTYPE[Id]; \
 	} \
 	void POOLTYPE::operator delete(void *pObj, int Id) \
@@ -68,7 +66,6 @@ private:
 		dbg_assert(gs_PoolUsed##POOLTYPE[Id], "not used"); \
 		dbg_assert(Id == (POOLTYPE *)pObj - (POOLTYPE *)gs_PoolData##POOLTYPE, "invalid id"); /* NOLINT(bugprone-pointer-arithmetic-on-polymorphic-object) */ \
 		gs_PoolUsed##POOLTYPE[Id] = 0; \
-		mem_zero(gs_PoolData##POOLTYPE[Id], sizeof(gs_PoolData##POOLTYPE[Id])); \
 		ASAN_POISON_MEMORY_REGION(gs_PoolData##POOLTYPE[Id], sizeof(gs_PoolData##POOLTYPE[Id])); \
 	} \
 	void POOLTYPE::operator delete(void *pObj) /* NOLINT(misc-new-delete-overloads) */ \
@@ -76,7 +73,6 @@ private:
 		int Id = (POOLTYPE *)pObj - (POOLTYPE *)gs_PoolData##POOLTYPE; /* NOLINT(bugprone-pointer-arithmetic-on-polymorphic-object) */ \
 		dbg_assert(gs_PoolUsed##POOLTYPE[Id], "not used"); \
 		gs_PoolUsed##POOLTYPE[Id] = 0; \
-		mem_zero(gs_PoolData##POOLTYPE[Id], sizeof(gs_PoolData##POOLTYPE[Id])); \
 		ASAN_POISON_MEMORY_REGION(gs_PoolData##POOLTYPE[Id], sizeof(gs_PoolData##POOLTYPE[Id])); \
 	}
 

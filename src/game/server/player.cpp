@@ -34,6 +34,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, uint32_t UniqueClientId, int ClientI
 	dbg_assert(GameServer()->m_pController->IsValidTeam(Team), "Invalid Team: %d", Team);
 	m_Team = Team;
 	m_NumInputs = 0;
+	m_pLastTarget = nullptr;
+	m_pCharacter = nullptr;
 	Reset();
 	GameServer()->Antibot()->OnPlayerInit(m_ClientId);
 }
@@ -42,6 +44,7 @@ CPlayer::~CPlayer()
 {
 	GameServer()->Antibot()->OnPlayerDestroy(m_ClientId);
 	delete m_pLastTarget;
+	m_pLastTarget = nullptr;
 	delete m_pCharacter;
 	m_pCharacter = nullptr;
 }
