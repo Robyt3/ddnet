@@ -140,7 +140,7 @@ public: // TODO: Maybe make protected
 		Arguments:
 			ClientId - Client ID
 	*/
-	virtual ESaveResult BlocksSave(int ClientId) { return ESaveResult::SUCCESS; }
+	virtual ESaveResult BlocksSave(int ClientId) const { return ESaveResult::SUCCESS; }
 
 	/*
 		Function GetOwnerId

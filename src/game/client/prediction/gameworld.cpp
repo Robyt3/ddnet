@@ -188,17 +188,19 @@ void CGameWorld::RemoveEntities()
 	for(auto *pEnt : m_apFirstEntityTypes)
 		for(; pEnt;)
 		{
-			m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
+			auto *pNextTraverseEntity = pEnt->m_pNextTypeEntity;
 			if(pEnt->m_MarkedForDestroy)
 			{
 				pEnt->Destroy();
 			}
-			pEnt = m_pNextTraverseEntity;
+			pEnt = pNextTraverseEntity;
 		}
 }
 
 void CGameWorld::Tick()
 {
+	dbg_assert(m_pNextTraverseEntity == nullptr, "Recursive entity traversal");
+
 	// update all objects
 	for(int i = 0; i < NUM_ENTTYPES; i++)
 	{
@@ -212,6 +214,7 @@ void CGameWorld::Tick()
 				m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
 				((CCharacter *)pEnt)->PreTick();
 				pEnt = m_pNextTraverseEntity;
+				m_pNextTraverseEntity = nullptr;
 			}
 		}
 
@@ -221,6 +224,7 @@ void CGameWorld::Tick()
 			m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
 			pEnt->Tick();
 			pEnt = m_pNextTraverseEntity;
+			m_pNextTraverseEntity = nullptr;
 		}
 	}
 
@@ -231,6 +235,7 @@ void CGameWorld::Tick()
 			pEnt->TickDeferred();
 			pEnt->m_SnapTicks++;
 			pEnt = m_pNextTraverseEntity;
+			m_pNextTraverseEntity = nullptr;
 		}
 
 	RemoveEntities();

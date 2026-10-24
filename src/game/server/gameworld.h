@@ -176,7 +176,7 @@ public:
 		Function: BlocksSave
 			Checks if any entity would block /save
 	*/
-	ESaveResult BlocksSave(int ClientId);
+	ESaveResult BlocksSave(int ClientId) const;
 
 	// DDRace
 	void ReleaseHooked(int ClientId);
